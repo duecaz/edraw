@@ -1,5 +1,5 @@
 app = "edraw-room"
-primary_region = "mia"
+primary_region = "dfw"
 
 [build]
   dockerfile = "Dockerfile"
