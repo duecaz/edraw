@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Excalidraw, MainMenu, useHandleLibrary } from "@excalidraw/excalidraw";
 import { io, Socket } from "socket.io-client";
 import { CustomToolbar } from "./CustomToolbar";
+import { NamePrompt } from "./NamePrompt";
 
 const ROOM_SERVER_URL =
   (import.meta.env.VITE_ROOM_SERVER as string | undefined) ||
@@ -15,8 +16,8 @@ const COLORS = [
 function getOrCreateRoom(): string {
   const url = new URL(window.location.href);
   let room = url.searchParams.get("room");
-  // Backwards compat: previous versions stored the room in the hash
   if (!room) {
+    // Backwards compat: room was previously stored in hash
     const hashParams = new URLSearchParams(url.hash.slice(1));
     const fromHash = hashParams.get("room");
     if (fromHash) {
@@ -39,35 +40,48 @@ function randomId(len = 8): string {
   return Math.random().toString(36).slice(2, 2 + len);
 }
 
+function getSavedName(): string {
+  return localStorage.getItem("edraw-username") || "";
+}
+
 export default function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [api, setApi] = useState<any>(null);
   const [connected, setConnected] = useState(false);
   const [peers, setPeers] = useState(0);
+  const [username, setUsername] = useState<string>(getSavedName);
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const lastSentVersionRef = useRef(0);
   const lastRemoteVersionRef = useRef(0);
 
+  const room = useMemo(() => getOrCreateRoom(), []);
+
   const me = useMemo(
     () => ({
       id: randomId(),
-      name: `User-${randomId(4)}`,
+      name: username || `User-${randomId(4)}`,
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
     }),
-    [],
+    [username],
   );
 
-  const room = useMemo(() => getOrCreateRoom(), []);
+  // libraryReturnUrl: where libraries.excalidraw.com redirects after "Add to Excalidraw".
+  // We use the current URL (with ?room= but without any hash) so the room is preserved
+  // even when the browser falls back from postMessage to a full redirect.
+  const libraryReturnUrl = useMemo(() => {
+    const url = new URL(window.location.href);
+    url.hash = "";
+    return url.toString();
+  }, []);
 
-  // Lets users import shape libraries from libraries.excalidraw.com
+  // Handles #addLibrary= hash set by libraries.excalidraw.com (postMessage + redirect fallback)
   useHandleLibrary({ excalidrawAPI: api });
 
   useEffect(() => {
-    if (!api) return;
+    if (!api || !username) return;
 
     const socket = io(ROOM_SERVER_URL, {
-      // Allow polling fallback so cold-start machines don't drop the connection
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,
@@ -89,14 +103,8 @@ export default function App() {
     socket.on("joined", ({ peers: p }: { room: string; peers: number }) => {
       setPeers(p);
     });
-
-    socket.on("user-joined", () => {
-      setPeers((n) => n + 1);
-    });
-
-    socket.on("user-left", () => {
-      setPeers((n) => Math.max(0, n - 1));
-    });
+    socket.on("user-joined", () => setPeers((n) => n + 1));
+    socket.on("user-left", () => setPeers((n) => Math.max(0, n - 1)));
 
     socket.on(
       "scene-update",
@@ -108,9 +116,11 @@ export default function App() {
         lastRemoteVersionRef.current = vs;
         applyingRemoteRef.current = true;
         api.updateScene({ elements: els });
-        // updateScene triggers onChange asynchronously after React renders,
+        // updateScene fires onChange asynchronously after React renders,
         // so clear the flag after the next paint to avoid re-broadcasting.
-        requestAnimationFrame(() => { applyingRemoteRef.current = false; });
+        requestAnimationFrame(() => {
+          applyingRemoteRef.current = false;
+        });
       },
     );
 
@@ -144,7 +154,7 @@ export default function App() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [api, room, me]);
+  }, [api, room, me, username]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = (elements: readonly any[]) => {
@@ -153,7 +163,6 @@ export default function App() {
     if (!socket || !socket.connected) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const vs = (elements as any[]).reduce((acc, el) => acc + (el.version || 0), 0);
-    // Skip if this is the echo of what we just received or already sent
     if (vs === lastSentVersionRef.current || vs === lastRemoteVersionRef.current) return;
     lastSentVersionRef.current = vs;
     socket.emit("scene-update", { room, elements });
@@ -165,13 +174,17 @@ export default function App() {
   }) => {
     const socket = socketRef.current;
     if (!socket || !socket.connected) return;
-    socket.emit("pointer-update", {
-      room,
-      user: me,
-      pointer: payload.pointer,
-      button: payload.button,
-    });
+    socket.emit("pointer-update", { room, user: me, pointer: payload.pointer, button: payload.button });
   };
+
+  const handleNameConfirm = (name: string) => {
+    localStorage.setItem("edraw-username", name);
+    setUsername(name);
+  };
+
+  if (!username) {
+    return <NamePrompt onConfirm={handleNameConfirm} />;
+  }
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
@@ -195,8 +208,8 @@ export default function App() {
       >
         {connected
           ? peers > 0
-            ? `Conectado · ${peers} colaborador${peers > 1 ? "es" : ""}`
-            : "Conectado · solo"
+            ? `${username} · ${peers} colaborador${peers > 1 ? "es" : ""}`
+            : `${username} · solo`
           : "Conectando..."}
       </div>
 
@@ -204,13 +217,9 @@ export default function App() {
         excalidrawAPI={(a) => setApi(a)}
         onChange={handleChange}
         onPointerUpdate={handlePointerUpdate}
-        libraryReturnUrl={window.location.href}
-        initialData={{
-          appState: { viewBackgroundColor: "#fafafa" },
-        }}
-        UIOptions={{
-          canvasActions: { saveToActiveFile: false },
-        }}
+        libraryReturnUrl={libraryReturnUrl}
+        initialData={{ appState: { viewBackgroundColor: "#fafafa" } }}
+        UIOptions={{ canvasActions: { saveToActiveFile: false } }}
       >
         <MainMenu>
           <MainMenu.DefaultItems.LoadScene />
@@ -222,7 +231,10 @@ export default function App() {
           <MainMenu.DefaultItems.ChangeCanvasBackground />
         </MainMenu>
       </Excalidraw>
-      <CustomToolbar room={room} />
+      <CustomToolbar room={room} username={username} onChangeName={() => {
+        localStorage.removeItem("edraw-username");
+        setUsername("");
+      }} />
     </div>
   );
 }

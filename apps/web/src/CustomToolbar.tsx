@@ -1,11 +1,12 @@
 import { useState } from "react";
 
-type Props = { room: string };
+type Props = {
+  room: string;
+  username: string;
+  onChangeName: () => void;
+};
 
-// Lightweight QR generator using a public quickchart-style endpoint would
-// require a network call. To keep this fully offline-capable we render the
-// share URL as text and a copy button. Swap in any QR library later.
-export function CustomToolbar({ room }: Props) {
+export function CustomToolbar({ room, username, onChangeName }: Props) {
   const [open, setOpen] = useState(false);
   const shareUrl = `${window.location.origin}${window.location.pathname}?room=${room}`;
 
@@ -35,7 +36,7 @@ export function CustomToolbar({ room }: Props) {
             borderRadius: 8,
             padding: 12,
             boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-            maxWidth: 320,
+            width: 280,
           }}
         >
           <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
@@ -50,6 +51,7 @@ export function CustomToolbar({ room }: Props) {
               padding: 6,
               border: "1px solid #eee",
               borderRadius: 4,
+              boxSizing: "border-box",
             }}
             onFocus={(e) => e.currentTarget.select()}
           />
@@ -64,9 +66,29 @@ export function CustomToolbar({ room }: Props) {
               border: "none",
               borderRadius: 4,
               cursor: "pointer",
+              fontSize: 13,
             }}
           >
             Copiar enlace
+          </button>
+          <hr style={{ margin: "10px 0", border: "none", borderTop: "1px solid #eee" }} />
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 4 }}>
+            Conectado como <strong>{username}</strong>
+          </div>
+          <button
+            onClick={() => { setOpen(false); onChangeName(); }}
+            style={{
+              width: "100%",
+              padding: "6px 10px",
+              background: "#f3f4f6",
+              color: "#374151",
+              border: "1px solid #e5e7eb",
+              borderRadius: 4,
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            Cambiar nombre
           </button>
         </div>
       )}
@@ -81,6 +103,7 @@ export function CustomToolbar({ room }: Props) {
           borderRadius: 8,
           cursor: "pointer",
           boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+          fontSize: 13,
         }}
       >
         {open ? "Cerrar" : "Compartir"}
