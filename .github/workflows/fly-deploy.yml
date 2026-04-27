@@ -3,12 +3,6 @@ name: Deploy to Fly.io
 on:
   push:
     branches: [main]
-    paths:
-      - "apps/web/**"
-      - "apps/room/**"
-      - "package.json"
-      - "package-lock.json"
-      - ".github/workflows/fly-deploy.yml"
   workflow_dispatch:
     inputs:
       target:
