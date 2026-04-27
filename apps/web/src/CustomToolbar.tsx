@@ -7,7 +7,7 @@ type Props = { room: string };
 // share URL as text and a copy button. Swap in any QR library later.
 export function CustomToolbar({ room }: Props) {
   const [open, setOpen] = useState(false);
-  const shareUrl = `${window.location.origin}${window.location.pathname}#room=${room}`;
+  const shareUrl = `${window.location.origin}${window.location.pathname}?room=${room}`;
 
   const copy = async () => {
     await navigator.clipboard.writeText(shareUrl);

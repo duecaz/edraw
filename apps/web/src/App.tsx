@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Excalidraw, MainMenu } from "@excalidraw/excalidraw";
+import { Excalidraw, MainMenu, useHandleLibrary } from "@excalidraw/excalidraw";
 import { io, Socket } from "socket.io-client";
 import { CustomToolbar } from "./CustomToolbar";
 
@@ -13,12 +13,24 @@ const COLORS = [
 ];
 
 function getOrCreateRoom(): string {
-  const params = new URLSearchParams(window.location.hash.slice(1));
-  let room = params.get("room");
+  const url = new URL(window.location.href);
+  let room = url.searchParams.get("room");
+  // Backwards compat: previous versions stored the room in the hash
+  if (!room) {
+    const hashParams = new URLSearchParams(url.hash.slice(1));
+    const fromHash = hashParams.get("room");
+    if (fromHash) {
+      room = fromHash;
+      hashParams.delete("room");
+      url.hash = hashParams.toString() ? `#${hashParams}` : "";
+    }
+  }
   if (!room) {
     room = Math.random().toString(36).slice(2, 10);
-    params.set("room", room);
-    window.location.hash = params.toString();
+  }
+  if (url.searchParams.get("room") !== room) {
+    url.searchParams.set("room", room);
+    window.history.replaceState(null, "", url.toString());
   }
   return room;
 }
@@ -47,6 +59,9 @@ export default function App() {
   );
 
   const room = useMemo(() => getOrCreateRoom(), []);
+
+  // Lets users import shape libraries from libraries.excalidraw.com
+  useHandleLibrary({ excalidrawAPI: api });
 
   useEffect(() => {
     if (!api) return;
@@ -189,6 +204,7 @@ export default function App() {
         excalidrawAPI={(a) => setApi(a)}
         onChange={handleChange}
         onPointerUpdate={handlePointerUpdate}
+        libraryReturnUrl={window.location.href}
         initialData={{
           appState: { viewBackgroundColor: "#fafafa" },
         }}
