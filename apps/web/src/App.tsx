@@ -30,6 +30,8 @@ function randomId(len = 8): string {
 export default function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [api, setApi] = useState<any>(null);
+  const [connected, setConnected] = useState(false);
+  const [peers, setPeers] = useState(0);
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const lastSentVersionRef = useRef(0);
@@ -45,15 +47,39 @@ export default function App() {
 
   const room = useMemo(() => getOrCreateRoom(), []);
 
-  // Connect socket and wire up sync
   useEffect(() => {
     if (!api) return;
 
-    const socket = io(ROOM_SERVER_URL, { transports: ["websocket"] });
+    const socket = io(ROOM_SERVER_URL, {
+      // Allow polling fallback so cold-start machines don't drop the connection
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: Infinity,
+      timeout: 10000,
+    });
     socketRef.current = socket;
 
     socket.on("connect", () => {
+      setConnected(true);
       socket.emit("join-room", { room, user: me });
+    });
+
+    socket.on("disconnect", () => {
+      setConnected(false);
+      setPeers(0);
+    });
+
+    socket.on("joined", ({ peers: p }: { room: string; peers: number }) => {
+      setPeers(p);
+    });
+
+    socket.on("user-joined", () => {
+      setPeers((n) => n + 1);
+    });
+
+    socket.on("user-left", () => {
+      setPeers((n) => Math.max(0, n - 1));
     });
 
     socket.on(
@@ -77,7 +103,6 @@ export default function App() {
       }) => {
         if (payload.from === socket.id) return;
         const collaborators = new Map();
-        // Preserve existing collaborators
         const current = api.getAppState().collaborators as
           | Map<string, unknown>
           | undefined;
@@ -100,13 +125,11 @@ export default function App() {
     };
   }, [api, room, me]);
 
-  // Broadcast scene changes
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = (elements: readonly any[]) => {
     if (applyingRemoteRef.current) return;
     const socket = socketRef.current;
     if (!socket || !socket.connected) return;
-    // Cheap dedupe: only send when length or last update changes
     const version = elements.length
       ? elements.length * 1e9 +
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,6 +156,31 @@ export default function App() {
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
+      {/* Connection status bar */}
+      <div
+        style={{
+          position: "absolute",
+          top: 8,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 10,
+          background: connected ? "#d1fae5" : "#fee2e2",
+          color: connected ? "#065f46" : "#991b1b",
+          border: `1px solid ${connected ? "#6ee7b7" : "#fca5a5"}`,
+          borderRadius: 6,
+          padding: "3px 10px",
+          fontSize: 12,
+          fontFamily: "system-ui, sans-serif",
+          pointerEvents: "none",
+        }}
+      >
+        {connected
+          ? peers > 0
+            ? `Conectado · ${peers} colaborador${peers > 1 ? "es" : ""}`
+            : "Conectado · solo"
+          : "Conectando..."}
+      </div>
+
       <Excalidraw
         excalidrawAPI={(a) => setApi(a)}
         onChange={handleChange}
