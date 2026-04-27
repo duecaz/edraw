@@ -35,6 +35,7 @@ export default function App() {
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const lastSentVersionRef = useRef(0);
+  const lastRemoteVersionRef = useRef(0);
 
   const me = useMemo(
     () => ({
@@ -86,10 +87,15 @@ export default function App() {
       "scene-update",
       (payload: { elements: unknown[]; from: string }) => {
         if (payload.from === socket.id) return;
-        applyingRemoteRef.current = true;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        api.updateScene({ elements: payload.elements as any });
-        applyingRemoteRef.current = false;
+        const els = payload.elements as any[];
+        const vs = els.reduce((acc, el) => acc + (el.version || 0), 0);
+        lastRemoteVersionRef.current = vs;
+        applyingRemoteRef.current = true;
+        api.updateScene({ elements: els });
+        // updateScene triggers onChange asynchronously after React renders,
+        // so clear the flag after the next paint to avoid re-broadcasting.
+        requestAnimationFrame(() => { applyingRemoteRef.current = false; });
       },
     );
 
@@ -130,13 +136,11 @@ export default function App() {
     if (applyingRemoteRef.current) return;
     const socket = socketRef.current;
     if (!socket || !socket.connected) return;
-    const version = elements.length
-      ? elements.length * 1e9 +
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (elements as any[]).reduce((acc, el) => acc + (el.version || 0), 0)
-      : 0;
-    if (version === lastSentVersionRef.current) return;
-    lastSentVersionRef.current = version;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vs = (elements as any[]).reduce((acc, el) => acc + (el.version || 0), 0);
+    // Skip if this is the echo of what we just received or already sent
+    if (vs === lastSentVersionRef.current || vs === lastRemoteVersionRef.current) return;
+    lastSentVersionRef.current = vs;
     socket.emit("scene-update", { room, elements });
   };
 
