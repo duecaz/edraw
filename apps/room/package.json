@@ -1,0 +1,13 @@
+{
+  "name": "@edraw/room",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  }
+}

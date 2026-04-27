@@ -1,0 +1,13 @@
+{
+  "name": "edraw",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace apps/web run dev",
+    "dev:room": "npm --workspace apps/room run dev",
+    "build:web": "npm --workspace apps/web run build"
+  }
+}
