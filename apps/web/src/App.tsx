@@ -324,6 +324,35 @@ export default function App() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  // Move Excalidraw's Undo/Redo island into the main toolbar so they
+  // appear as the first items right after the lock button. We only move
+  // the existing DOM node — its React handlers keep working unchanged.
+  // A MutationObserver re-runs the move whenever Excalidraw re-renders.
+  useEffect(() => {
+    if (!api) return;
+    const root = document.querySelector(".excalidraw");
+    if (!root) return;
+
+    const inject = () => {
+      const toolbar = root.querySelector(".App-toolbar") as HTMLElement | null;
+      const undoRedo = root.querySelector(".undo-redo-buttons") as HTMLElement | null;
+      if (!toolbar || !undoRedo) return;
+      if (undoRedo.parentElement === toolbar) return;
+      // Place right after the first divider (after lock + pen-mode).
+      const divider = toolbar.querySelector(".App-toolbar__divider");
+      if (divider && divider.nextSibling) {
+        toolbar.insertBefore(undoRedo, divider.nextSibling);
+      } else {
+        toolbar.insertBefore(undoRedo, toolbar.firstChild);
+      }
+    };
+
+    inject();
+    const observer = new MutationObserver(inject);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [api]);
+
   const handleToggleToolbarBottom = () => {
     const next = !toolbarBottom;
     setToolbarBottom(next);
