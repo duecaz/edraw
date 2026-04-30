@@ -26,6 +26,12 @@ export type PenDetectorOptions = {
   element: HTMLElement;
   thresholds?: Partial<Thresholds>;
   smooth?: SmoothOptions;
+  /**
+   * When true, do not call preventDefault on touch events. Use this when
+   * the detector runs alongside another library that needs the same events
+   * (e.g. Excalidraw's pointer-based drawing). Defaults to false.
+   */
+  passive?: boolean;
 };
 
 export type PenEvent = {
@@ -75,7 +81,7 @@ export class PenDetector {
   private onTouchMove: (e: TouchEvent) => void;
   private onTouchEnd: (e: TouchEvent) => void;
 
-  constructor({ element, thresholds, smooth = {} }: PenDetectorOptions) {
+  constructor({ element, thresholds, smooth = {}, passive = false }: PenDetectorOptions) {
     if (!element) throw new Error("PenDetector: element required");
     this.el = element;
     this.thr = {
@@ -86,18 +92,20 @@ export class PenDetector {
     this.smXY = clamp(smooth.xy ?? 0.2, 0, 0.95);
     this.smP = clamp(smooth.pressure ?? 0.6, 0, 0.95);
 
-    this.el.style.touchAction = "none";
+    if (!passive) {
+      this.el.style.touchAction = "none";
+    }
 
     this.onTouchStart = (e) => {
-      e.preventDefault();
+      if (!passive) e.preventDefault();
       this.handle(e);
     };
     this.onTouchMove = (e) => {
-      e.preventDefault();
+      if (!passive) e.preventDefault();
       this.handle(e);
     };
     this.onTouchEnd = (e) => {
-      e.preventDefault();
+      if (!passive) e.preventDefault();
       const trackedLifted =
         this.trackId !== null &&
         Array.from(e.changedTouches).some((t) => t.identifier === this.trackId);
@@ -111,7 +119,7 @@ export class PenDetector {
       }
     };
 
-    const opts: AddEventListenerOptions = { passive: false };
+    const opts: AddEventListenerOptions = { passive };
     this.el.addEventListener("touchstart", this.onTouchStart, opts);
     this.el.addEventListener("touchmove", this.onTouchMove, opts);
     this.el.addEventListener("touchend", this.onTouchEnd, opts);

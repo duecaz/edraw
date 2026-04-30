@@ -65,6 +65,10 @@ export function useExcalidrawPen({
       element: el,
       thresholds,
       smooth,
+      // Passive: do NOT preventDefault — Excalidraw needs the touches to
+      // produce its own pointer events for drawing. We only read radius
+      // info to classify and to switch the active tool.
+      passive: true,
     });
     detectorRef.current = detector;
 

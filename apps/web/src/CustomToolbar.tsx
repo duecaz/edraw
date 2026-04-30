@@ -6,6 +6,7 @@ type Props = {
   irMode: boolean;
   onToggleIr: () => void;
   onOpenLibrary: () => void;
+  onCalibrateIr: () => void;
   onChangeName: () => void;
 };
 
@@ -28,6 +29,7 @@ export function CustomToolbar({
   irMode,
   onToggleIr,
   onOpenLibrary,
+  onCalibrateIr,
   onChangeName,
 }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
@@ -158,6 +160,13 @@ export function CustomToolbar({
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
         <button onClick={onOpenLibrary} style={btn(false)} title="Catálogo educativo">
           Librerías
+        </button>
+        <button
+          onClick={onCalibrateIr}
+          style={btn(false)}
+          title="Calibrar umbrales del lápiz IR"
+        >
+          Calibrar IR
         </button>
         <button
           onClick={onToggleIr}

@@ -2,9 +2,26 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Excalidraw, MainMenu, useHandleLibrary } from "@excalidraw/excalidraw";
 import { io, Socket } from "socket.io-client";
 import { useExcalidrawPen } from "@edraw/pen/excalidraw";
+import type { PenEvent, Thresholds } from "@edraw/pen";
 import { CustomToolbar } from "./CustomToolbar";
 import { NamePrompt } from "./NamePrompt";
 import { LibraryPicker } from "./LibraryPicker";
+import { IrCalibrate } from "./IrCalibrate";
+
+const PEN_THRESHOLDS_KEY = "edraw-pen-thresholds";
+
+function loadSavedThresholds(): Thresholds | undefined {
+  try {
+    const raw = localStorage.getItem(PEN_THRESHOLDS_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      if (d?.penThin && d?.penThick && d?.eraser) return d;
+    }
+  } catch {
+    /* ignore */
+  }
+  return undefined;
+}
 
 const ROOM_SERVER_URL =
   (import.meta.env.VITE_ROOM_SERVER as string | undefined) ||
@@ -78,7 +95,18 @@ export default function App() {
   useHandleLibrary({ excalidrawAPI: api });
 
   // IR pen detector — wires the canvas to swap tools (pen / eraser) by radius.
-  useExcalidrawPen({ excalidrawAPI: api, enabled: irMode });
+  // Reads any thresholds the user calibrated via /?ir-calibrate=1.
+  const penThresholds = useMemo(() => loadSavedThresholds(), [irMode]);
+  const [penDebug, setPenDebug] = useState<PenEvent | null>(null);
+  useExcalidrawPen({
+    excalidrawAPI: api,
+    enabled: irMode,
+    thresholds: penThresholds,
+    onPenEvent: (kind, evt) => {
+      if (kind === "up") setPenDebug(null);
+      else setPenDebug(evt);
+    },
+  });
 
   // Socket connection — only if we're in a room.
   useEffect(() => {
@@ -188,6 +216,16 @@ export default function App() {
     localStorage.setItem("edraw-ir-mode", next ? "1" : "0");
   };
 
+  // Calibration page: shown when the URL has ?ir-calibrate=1.
+  // Standalone full-screen UI for tuning IR pen thresholds.
+  const calibrateMode = useMemo(
+    () => new URLSearchParams(window.location.search).get("ir-calibrate") === "1",
+    [],
+  );
+  if (calibrateMode) {
+    return <IrCalibrate />;
+  }
+
   // Only ask for a name when the user is joining a collaboration room.
   if (inCollab && !username) {
     return <NamePrompt onConfirm={handleNameConfirm} />;
@@ -228,17 +266,44 @@ export default function App() {
             top: 8,
             right: 8,
             zIndex: 10,
-            background: "#fef3c7",
-            color: "#78350f",
-            border: "1px solid #fde68a",
-            borderRadius: 6,
-            padding: "3px 10px",
-            fontSize: 12,
-            fontFamily: "system-ui, sans-serif",
+            display: "flex",
+            flexDirection: "column",
+            gap: 4,
+            alignItems: "flex-end",
             pointerEvents: "none",
           }}
         >
-          Modo pizarra IR activo
+          <div
+            style={{
+              background: "#fef3c7",
+              color: "#78350f",
+              border: "1px solid #fde68a",
+              borderRadius: 6,
+              padding: "3px 10px",
+              fontSize: 12,
+              fontFamily: "system-ui, sans-serif",
+            }}
+          >
+            Pizarra IR · {penDebug ? penDebug.tool : "esperando..."}
+          </div>
+          {penDebug && (
+            <div
+              style={{
+                background: "rgba(0,0,0,0.78)",
+                color: "#4cc9f0",
+                fontFamily: "monospace",
+                fontSize: 11,
+                padding: "4px 8px",
+                borderRadius: 6,
+                lineHeight: 1.5,
+              }}
+            >
+              rX:{penDebug.radiusX.toFixed(2)} rY:{penDebug.radiusY.toFixed(2)}
+              {" · "}metric:{penDebug.metric.toFixed(2)}
+              <br />
+              pts:{penDebug.pointCount} · area:{Math.round(penDebug.bboxArea)}px²
+            </div>
+          )}
         </div>
       )}
 
@@ -267,6 +332,11 @@ export default function App() {
         irMode={irMode}
         onToggleIr={handleToggleIr}
         onOpenLibrary={() => setLibraryOpen(true)}
+        onCalibrateIr={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set("ir-calibrate", "1");
+          window.location.href = url.toString();
+        }}
         onChangeName={() => {
           localStorage.removeItem("edraw-username");
           setUsername("");
