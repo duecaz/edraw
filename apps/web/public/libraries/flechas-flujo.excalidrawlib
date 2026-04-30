@@ -1,0 +1,95 @@
+{
+  "type": "excalidrawlib",
+  "version": 2,
+  "source": "edraw",
+  "libraryItems": [
+    {
+      "id": "edraw-arrow-right",
+      "status": "published",
+      "created": 1714435200000,
+      "name": "Flecha derecha",
+      "elements": [
+        {
+          "type": "arrow",
+          "version": 1,
+          "versionNonce": 300001,
+          "isDeleted": false,
+          "id": "edraw-arrow-right-1",
+          "fillStyle": "hachure",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "angle": 0,
+          "x": 0,
+          "y": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "width": 120,
+          "height": 0,
+          "seed": 21,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "boundElements": [],
+          "updated": 1714435200000,
+          "link": null,
+          "locked": false,
+          "points": [
+            [0, 0],
+            [120, 0]
+          ],
+          "lastCommittedPoint": null,
+          "startBinding": null,
+          "endBinding": null,
+          "startArrowhead": null,
+          "endArrowhead": "arrow"
+        }
+      ]
+    },
+    {
+      "id": "edraw-arrow-double",
+      "status": "published",
+      "created": 1714435200000,
+      "name": "Flecha doble",
+      "elements": [
+        {
+          "type": "arrow",
+          "version": 1,
+          "versionNonce": 300002,
+          "isDeleted": false,
+          "id": "edraw-arrow-double-1",
+          "fillStyle": "hachure",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "angle": 0,
+          "x": 0,
+          "y": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "width": 120,
+          "height": 0,
+          "seed": 22,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "boundElements": [],
+          "updated": 1714435200000,
+          "link": null,
+          "locked": false,
+          "points": [
+            [0, 0],
+            [120, 0]
+          ],
+          "lastCommittedPoint": null,
+          "startBinding": null,
+          "endBinding": null,
+          "startArrowhead": "arrow",
+          "endArrowhead": "arrow"
+        }
+      ]
+    }
+  ]
+}

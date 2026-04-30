@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Excalidraw, MainMenu, useHandleLibrary } from "@excalidraw/excalidraw";
 import { io, Socket } from "socket.io-client";
+import { useExcalidrawPen } from "@edraw/pen/excalidraw";
 import { CustomToolbar } from "./CustomToolbar";
 import { NamePrompt } from "./NamePrompt";
+import { LibraryPicker } from "./LibraryPicker";
 
 const ROOM_SERVER_URL =
   (import.meta.env.VITE_ROOM_SERVER as string | undefined) ||
@@ -13,27 +15,21 @@ const COLORS = [
   "#A0C4FF", "#BDB2FF", "#FFC6FF",
 ];
 
-function getOrCreateRoom(): string {
+function readRoomFromUrl(): string | null {
   const url = new URL(window.location.href);
-  let room = url.searchParams.get("room");
-  if (!room) {
-    // Backwards compat: room was previously stored in hash
-    const hashParams = new URLSearchParams(url.hash.slice(1));
-    const fromHash = hashParams.get("room");
-    if (fromHash) {
-      room = fromHash;
-      hashParams.delete("room");
-      url.hash = hashParams.toString() ? `#${hashParams}` : "";
-    }
-  }
-  if (!room) {
-    room = Math.random().toString(36).slice(2, 10);
-  }
-  if (url.searchParams.get("room") !== room) {
-    url.searchParams.set("room", room);
+  const fromQuery = url.searchParams.get("room");
+  if (fromQuery) return fromQuery;
+  const hashParams = new URLSearchParams(url.hash.slice(1));
+  const fromHash = hashParams.get("room");
+  if (fromHash) {
+    // Migrate to query string and strip from hash
+    hashParams.delete("room");
+    url.hash = hashParams.toString() ? `#${hashParams}` : "";
+    url.searchParams.set("room", fromHash);
     window.history.replaceState(null, "", url.toString());
+    return fromHash;
   }
-  return room;
+  return null;
 }
 
 function randomId(len = 8): string {
@@ -50,36 +46,44 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [peers, setPeers] = useState(0);
   const [username, setUsername] = useState<string>(getSavedName);
+  const [irMode, setIrMode] = useState<boolean>(
+    () => localStorage.getItem("edraw-ir-mode") === "1",
+  );
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const lastSentVersionRef = useRef(0);
   const lastRemoteVersionRef = useRef(0);
 
-  const room = useMemo(() => getOrCreateRoom(), []);
+  // Room is null when the user is solo (no ?room= in URL).
+  const room = useMemo(() => readRoomFromUrl(), []);
+  const inCollab = room !== null;
 
   const me = useMemo(
     () => ({
       id: randomId(),
-      name: username || `User-${randomId(4)}`,
+      name: username || "Yo",
       color: COLORS[Math.floor(Math.random() * COLORS.length)],
     }),
     [username],
   );
 
-  // libraryReturnUrl: where libraries.excalidraw.com redirects after "Add to Excalidraw".
-  // We use the current URL (with ?room= but without any hash) so the room is preserved
-  // even when the browser falls back from postMessage to a full redirect.
   const libraryReturnUrl = useMemo(() => {
     const url = new URL(window.location.href);
     url.hash = "";
     return url.toString();
   }, []);
 
-  // Handles #addLibrary= hash set by libraries.excalidraw.com (postMessage + redirect fallback)
+  // Handles #addLibrary= from libraries.excalidraw.com when used as fallback.
   useHandleLibrary({ excalidrawAPI: api });
 
+  // IR pen detector — wires the canvas to swap tools (pen / eraser) by radius.
+  useExcalidrawPen({ excalidrawAPI: api, enabled: irMode });
+
+  // Socket connection — only if we're in a room.
   useEffect(() => {
-    if (!api || !username) return;
+    if (!api || !inCollab || !room) return;
+    if (!username) return; // wait for the name prompt
 
     const socket = io(ROOM_SERVER_URL, {
       transports: ["websocket", "polling"],
@@ -94,12 +98,10 @@ export default function App() {
       setConnected(true);
       socket.emit("join-room", { room, user: me });
     });
-
     socket.on("disconnect", () => {
       setConnected(false);
       setPeers(0);
     });
-
     socket.on("joined", ({ peers: p }: { room: string; peers: number }) => {
       setPeers(p);
     });
@@ -116,8 +118,6 @@ export default function App() {
         lastRemoteVersionRef.current = vs;
         applyingRemoteRef.current = true;
         api.updateScene({ elements: els });
-        // updateScene fires onChange asynchronously after React renders,
-        // so clear the flag after the next paint to avoid re-broadcasting.
         requestAnimationFrame(() => {
           applyingRemoteRef.current = false;
         });
@@ -154,7 +154,7 @@ export default function App() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [api, room, me, username]);
+  }, [api, inCollab, room, me, username]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = (elements: readonly any[]) => {
@@ -182,36 +182,65 @@ export default function App() {
     setUsername(name);
   };
 
-  if (!username) {
+  const handleToggleIr = () => {
+    const next = !irMode;
+    setIrMode(next);
+    localStorage.setItem("edraw-ir-mode", next ? "1" : "0");
+  };
+
+  // Only ask for a name when the user is joining a collaboration room.
+  if (inCollab && !username) {
     return <NamePrompt onConfirm={handleNameConfirm} />;
   }
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
-      {/* Connection status bar */}
-      <div
-        style={{
-          position: "absolute",
-          top: 8,
-          left: "50%",
-          transform: "translateX(-50%)",
-          zIndex: 10,
-          background: connected ? "#d1fae5" : "#fee2e2",
-          color: connected ? "#065f46" : "#991b1b",
-          border: `1px solid ${connected ? "#6ee7b7" : "#fca5a5"}`,
-          borderRadius: 6,
-          padding: "3px 10px",
-          fontSize: 12,
-          fontFamily: "system-ui, sans-serif",
-          pointerEvents: "none",
-        }}
-      >
-        {connected
-          ? peers > 0
-            ? `${username} · ${peers} colaborador${peers > 1 ? "es" : ""}`
-            : `${username} · solo`
-          : "Conectando..."}
-      </div>
+      {inCollab && (
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10,
+            background: connected ? "#d1fae5" : "#fee2e2",
+            color: connected ? "#065f46" : "#991b1b",
+            border: `1px solid ${connected ? "#6ee7b7" : "#fca5a5"}`,
+            borderRadius: 6,
+            padding: "3px 10px",
+            fontSize: 12,
+            fontFamily: "system-ui, sans-serif",
+            pointerEvents: "none",
+          }}
+        >
+          {connected
+            ? peers > 0
+              ? `${username} · ${peers} colaborador${peers > 1 ? "es" : ""}`
+              : `${username} · solo`
+            : "Conectando..."}
+        </div>
+      )}
+
+      {irMode && (
+        <div
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            zIndex: 10,
+            background: "#fef3c7",
+            color: "#78350f",
+            border: "1px solid #fde68a",
+            borderRadius: 6,
+            padding: "3px 10px",
+            fontSize: 12,
+            fontFamily: "system-ui, sans-serif",
+            pointerEvents: "none",
+          }}
+        >
+          Modo pizarra IR activo
+        </div>
+      )}
 
       <Excalidraw
         excalidrawAPI={(a) => setApi(a)}
@@ -231,10 +260,25 @@ export default function App() {
           <MainMenu.DefaultItems.ChangeCanvasBackground />
         </MainMenu>
       </Excalidraw>
-      <CustomToolbar room={room} username={username} onChangeName={() => {
-        localStorage.removeItem("edraw-username");
-        setUsername("");
-      }} />
+
+      <CustomToolbar
+        room={room}
+        username={username}
+        irMode={irMode}
+        onToggleIr={handleToggleIr}
+        onOpenLibrary={() => setLibraryOpen(true)}
+        onChangeName={() => {
+          localStorage.removeItem("edraw-username");
+          setUsername("");
+        }}
+      />
+
+      {libraryOpen && (
+        <LibraryPicker
+          excalidrawAPI={api}
+          onClose={() => setLibraryOpen(false)}
+        />
+      )}
     </div>
   );
 }

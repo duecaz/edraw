@@ -41,8 +41,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy web
-        run: flyctl deploy --remote-only --build-arg VITE_ROOM_SERVER="${VITE_ROOM_SERVER}"
-        working-directory: apps/web
+        # Run from repo root: the web image needs packages/edraw-pen too,
+        # so the Dockerfile copies workspace files relative to the root.
+        run: |
+          flyctl deploy --remote-only \
+            --config apps/web/fly.toml \
+            --dockerfile apps/web/Dockerfile \
+            --build-arg VITE_ROOM_SERVER="${VITE_ROOM_SERVER}"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           VITE_ROOM_SERVER: ${{ vars.VITE_ROOM_SERVER || 'https://edraw-room.fly.dev' }}

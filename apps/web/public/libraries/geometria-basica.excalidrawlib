@@ -1,0 +1,158 @@
+{
+  "type": "excalidrawlib",
+  "version": 2,
+  "source": "edraw",
+  "libraryItems": [
+    {
+      "id": "edraw-geo-rect",
+      "status": "published",
+      "created": 1714435200000,
+      "name": "Rectángulo",
+      "elements": [
+        {
+          "type": "rectangle",
+          "version": 1,
+          "versionNonce": 100001,
+          "isDeleted": false,
+          "id": "edraw-geo-rect-1",
+          "fillStyle": "hachure",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "angle": 0,
+          "x": 0,
+          "y": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "width": 120,
+          "height": 80,
+          "seed": 1,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "boundElements": [],
+          "updated": 1714435200000,
+          "link": null,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "edraw-geo-ellipse",
+      "status": "published",
+      "created": 1714435200000,
+      "name": "Círculo",
+      "elements": [
+        {
+          "type": "ellipse",
+          "version": 1,
+          "versionNonce": 100002,
+          "isDeleted": false,
+          "id": "edraw-geo-ellipse-1",
+          "fillStyle": "hachure",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "angle": 0,
+          "x": 0,
+          "y": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "width": 100,
+          "height": 100,
+          "seed": 2,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "boundElements": [],
+          "updated": 1714435200000,
+          "link": null,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "edraw-geo-diamond",
+      "status": "published",
+      "created": 1714435200000,
+      "name": "Rombo",
+      "elements": [
+        {
+          "type": "diamond",
+          "version": 1,
+          "versionNonce": 100003,
+          "isDeleted": false,
+          "id": "edraw-geo-diamond-1",
+          "fillStyle": "hachure",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "angle": 0,
+          "x": 0,
+          "y": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "width": 100,
+          "height": 100,
+          "seed": 3,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "boundElements": [],
+          "updated": 1714435200000,
+          "link": null,
+          "locked": false
+        }
+      ]
+    },
+    {
+      "id": "edraw-geo-triangle",
+      "status": "published",
+      "created": 1714435200000,
+      "name": "Triángulo",
+      "elements": [
+        {
+          "type": "line",
+          "version": 1,
+          "versionNonce": 100004,
+          "isDeleted": false,
+          "id": "edraw-geo-triangle-1",
+          "fillStyle": "hachure",
+          "strokeWidth": 2,
+          "strokeStyle": "solid",
+          "roughness": 1,
+          "opacity": 100,
+          "angle": 0,
+          "x": 0,
+          "y": 0,
+          "strokeColor": "#1e1e1e",
+          "backgroundColor": "transparent",
+          "width": 120,
+          "height": 100,
+          "seed": 4,
+          "groupIds": [],
+          "frameId": null,
+          "roundness": null,
+          "boundElements": [],
+          "updated": 1714435200000,
+          "link": null,
+          "locked": false,
+          "points": [
+            [0, 100],
+            [60, 0],
+            [120, 100],
+            [0, 100]
+          ],
+          "lastCommittedPoint": null,
+          "startBinding": null,
+          "endBinding": null,
+          "startArrowhead": null,
+          "endArrowhead": null
+        }
+      ]
+    }
+  ]
+}

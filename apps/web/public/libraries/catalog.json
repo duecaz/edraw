@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "categories": [
+    { "id": "matematicas", "name": "Matemáticas" },
+    { "id": "ciencias", "name": "Ciencias Naturales" },
+    { "id": "general", "name": "General" }
+  ],
+  "items": [
+    {
+      "id": "geometria-basica",
+      "name": "Geometría básica",
+      "description": "Triángulos, cuadrados, círculos para clases de geometría.",
+      "category": "matematicas",
+      "file": "geometria-basica.excalidrawlib"
+    },
+    {
+      "id": "celula-basica",
+      "name": "Célula básica",
+      "description": "Membrana, núcleo y orgánulos básicos para biología.",
+      "category": "ciencias",
+      "file": "celula-basica.excalidrawlib"
+    },
+    {
+      "id": "flechas-flujo",
+      "name": "Flechas y flujos",
+      "description": "Flechas direccionales para diagramas de flujo y fuerzas.",
+      "category": "general",
+      "file": "flechas-flujo.excalidrawlib"
+    }
+  ]
+}
