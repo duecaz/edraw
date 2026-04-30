@@ -99,27 +99,6 @@ const CatalogIcon = (
   </svg>
 );
 
-const HelpIcon = (
-  <svg viewBox="0 0 24 24" style={iconStyle}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5M12 17h.01" />
-  </svg>
-);
-
-const ZoomInIcon = (
-  <svg viewBox="0 0 24 24" style={iconStyle}>
-    <circle cx="11" cy="11" r="7" />
-    <path d="M8 11h6M11 8v6M21 21l-4.3-4.3" />
-  </svg>
-);
-
-const ZoomOutIcon = (
-  <svg viewBox="0 0 24 24" style={iconStyle}>
-    <circle cx="11" cy="11" r="7" />
-    <path d="M8 11h6M21 21l-4.3-4.3" />
-  </svg>
-);
-
 const ZoomResetIcon = (
   <svg viewBox="0 0 24 24" style={iconStyle}>
     <circle cx="11" cy="11" r="7" />
@@ -165,9 +144,11 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(
     () => typeof document !== "undefined" && !!document.fullscreenElement,
   );
-  const [toolbarBottom, setToolbarBottom] = useState<boolean>(
-    () => localStorage.getItem("edraw-toolbar-bottom") === "1",
-  );
+  const [toolbarBottom, setToolbarBottom] = useState<boolean>(() => {
+    const saved = localStorage.getItem("edraw-toolbar-bottom");
+    // Default = bottom. Only false if the user explicitly toggled it.
+    return saved === null ? true : saved === "1";
+  });
   const [shareOpen, setShareOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
@@ -357,38 +338,20 @@ export default function App() {
     const cur = state.zoom?.value ?? 1;
     const z = Math.max(0.1, Math.min(30, nextZoom));
     if (z === cur) return;
-    // Keep the viewport centre stable while zooming.
     const w = state.width ?? window.innerWidth;
     const h = state.height ?? window.innerHeight;
     const cx = state.scrollX + w / cur / 2;
     const cy = state.scrollY + h / cur / 2;
-    const newScrollX = cx - w / z / 2;
-    const newScrollY = cy - h / z / 2;
     api.updateScene({
       appState: {
         zoom: { value: z },
-        scrollX: newScrollX,
-        scrollY: newScrollY,
+        scrollX: cx - w / z / 2,
+        scrollY: cy - h / z / 2,
       },
     });
   };
 
-  const handleZoomIn = () => {
-    if (!api) return;
-    setZoom((api.getAppState().zoom?.value ?? 1) * 1.2);
-  };
-  const handleZoomOut = () => {
-    if (!api) return;
-    setZoom((api.getAppState().zoom?.value ?? 1) / 1.2);
-  };
   const handleZoomReset = () => setZoom(1);
-
-  // Opens the built-in shortcuts dialog by simulating the "?" keystroke.
-  const handleHelp = () => {
-    document.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true }),
-    );
-  };
 
   // Calibration page: shown when the URL has ?ir-calibrate=1.
   // Standalone full-screen UI for tuning IR pen thresholds.
@@ -508,13 +471,6 @@ export default function App() {
           >
             {isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
           </MainMenu.Item>
-          <MainMenu.Separator />
-          <MainMenu.Item onSelect={handleZoomIn} icon={ZoomInIcon} shortcut="Ctrl+=">
-            Acercar
-          </MainMenu.Item>
-          <MainMenu.Item onSelect={handleZoomOut} icon={ZoomOutIcon} shortcut="Ctrl+-">
-            Alejar
-          </MainMenu.Item>
           <MainMenu.Item onSelect={handleZoomReset} icon={ZoomResetIcon} shortcut="Ctrl+0">
             Restablecer zoom
           </MainMenu.Item>
@@ -533,9 +489,7 @@ export default function App() {
           >
             {toolbarBottom ? "Barra arriba" : "Barra abajo"}
           </MainMenu.Item>
-          <MainMenu.Item onSelect={handleHelp} icon={HelpIcon} shortcut="?">
-            Atajos de teclado
-          </MainMenu.Item>
+          <MainMenu.DefaultItems.Help />
           <MainMenu.Separator />
           <MainMenu.DefaultItems.ClearCanvas />
           <MainMenu.DefaultItems.ToggleTheme />
