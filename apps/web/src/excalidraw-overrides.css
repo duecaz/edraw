@@ -16,24 +16,25 @@
   display: none !important;
 }
 
-/* 4. Undo/Redo are physically moved into the App-toolbar via a DOM
-      injection (see App.tsx). Style them to look native inside the
-      horizontal toolbar instead of as a stand-alone island. */
-.excalidraw .App-toolbar > .undo-redo-buttons {
-  flex-direction: row !important;
-  gap: 2px !important;
-  align-self: center;
-  background: transparent !important;
-  padding: 0 !important;
-  box-shadow: none !important;
-  margin: 0 4px;
-}
-/* Hide the now-empty footer-left container so it doesn't take vertical space. */
-.excalidraw .layer-ui__wrapper__footer-left:empty {
-  display: none;
+/* 4. Relocate Undo/Redo to the top-left, immediately next to (left of) the
+      centered toolbar that has the lock button as its first item.
+      When the toolbar is at the bottom (default), see rule #5 below. */
+.excalidraw .layer-ui__wrapper__footer-left .undo-redo-buttons {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  flex-direction: row;
+  gap: 4px;
+  background: var(--island-bg-color, #fff);
+  border-radius: var(--border-radius-lg, 8px);
+  padding: 4px;
+  box-shadow: var(--shadow-island, 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px 0 rgba(0, 0, 0, 0.04));
 }
 
-/* 5. Default layout = main toolbar pinned to the bottom-center. */
+/* 5. Default layout = main toolbar pinned to the bottom-center.
+      Undo/Redo sit at the bottom-left, on the same baseline as the toolbar,
+      so visually they read as a left wing of the same toolbar row. */
 .edraw-toolbar-bottom .excalidraw .App-toolbar-container {
   position: fixed !important;
   top: auto !important;
@@ -45,4 +46,9 @@
 .edraw-toolbar-bottom .excalidraw .layer-ui__wrapper__footer {
   /* Push the rest of the footer above the relocated toolbar. */
   bottom: 88px !important;
+}
+.edraw-toolbar-bottom .excalidraw .undo-redo-buttons {
+  top: auto !important;
+  bottom: 24px !important;
+  left: 12px !important;
 }
