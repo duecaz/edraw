@@ -1,17 +1,15 @@
 import { useEffect, useRef } from "react";
 import { PenDetector, type PenDetectorOptions, type PenEvent, type Tool } from "./PenDetector";
 
-// Minimal subset of the Excalidraw imperative API we use here.
-// We accept `any` to avoid pinning a specific Excalidraw version.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawAPI = any;
 
 export type ExcalidrawPenOptions = {
   /** ExcalidrawImperativeAPI from Excalidraw, or null while it boots. */
   excalidrawAPI: ExcalidrawAPI | null;
-  /** When false, the detector is not attached. Useful for a UI toggle. */
+  /** When false, the detector is not attached. */
   enabled: boolean;
-  /** Element to listen on. Defaults to the Excalidraw canvas wrapper. */
+  /** Element to listen on. Defaults to the Excalidraw root container. */
   container?: HTMLElement | null;
   /** Override classification thresholds. */
   thresholds?: PenDetectorOptions["thresholds"];
@@ -21,22 +19,42 @@ export type ExcalidrawPenOptions = {
   onPenEvent?: (kind: "down" | "move" | "up", evt: PenEvent | null) => void;
 };
 
-const TOOL_FOR: Record<Tool, "freedraw" | "eraser" | null> = {
+const TOOL_FOR: Record<Tool, "freedraw" | "line" | "eraser" | null> = {
   penThin: "freedraw",
-  penThick: "freedraw",
+  penThick: "line",
   eraser: "eraser",
   none: null,
 };
 
+const STROKE_WIDTH_FOR: Partial<Record<Tool, number>> = {
+  penThin: 1,
+  penThick: 2,
+};
+
+const STROKE_COLOR_FOR: Partial<Record<Tool, string>> = {
+  penThin: "#1e1e1e",
+  penThick: "#1e1e1e",
+};
+
 /**
- * Wires a PenDetector to an Excalidraw instance:
- *  - swaps the active tool to freedraw / eraser based on contact radius
- *  - applies a stronger stroke width for "penThick"
- *  - all the underlying drawing is still done by Excalidraw via pointer events
- *    (the IR board reports them as touch — Excalidraw handles them natively).
- *
- * The detector is mainly used here for *classification*: distinguishing pen
- * from eraser from finger from palm, and bumping pressure/width accordingly.
+ * Locates Excalidraw's root container. Tries a few selectors because
+ * class names have changed between versions.
+ */
+function findExcalidrawRoot(): HTMLElement | null {
+  return (
+    (document.querySelector(".excalidraw-container") as HTMLElement | null) ??
+    (document.querySelector(".excalidraw") as HTMLElement | null) ??
+    (document.querySelector(".excalidraw__canvas.interactive")
+      ?.parentElement as HTMLElement | null)
+  );
+}
+
+/**
+ * Wires a PenDetector to an Excalidraw instance. The detector is PASSIVE
+ * here — it does not preventDefault on touches, so Excalidraw keeps
+ * receiving the pointer events it needs to draw. We only use the detector
+ * to classify the contact and swap the active tool / stroke width on
+ * pendown.
  */
 export function useExcalidrawPen({
   excalidrawAPI,
@@ -47,78 +65,88 @@ export function useExcalidrawPen({
   onPenEvent,
 }: ExcalidrawPenOptions) {
   const detectorRef = useRef<PenDetector | null>(null);
+  // Stable ref so the effect doesn't re-attach on every parent render.
+  const onPenEventRef = useRef(onPenEvent);
+  onPenEventRef.current = onPenEvent;
 
   useEffect(() => {
     if (!enabled || !excalidrawAPI) return;
 
-    const el =
-      container ??
-      // Excalidraw wraps its canvases inside .excalidraw .excalidraw__canvas-wrapper
-      (document.querySelector(
-        ".excalidraw .excalidraw__canvas-wrapper",
-      ) as HTMLElement | null) ??
-      (document.querySelector(".excalidraw") as HTMLElement | null);
+    let cancelled = false;
+    let detector: PenDetector | null = null;
 
-    if (!el) return;
+    const attach = (el: HTMLElement) => {
+      detector = new PenDetector({
+        element: el,
+        thresholds,
+        smooth,
+        passive: true,
+      });
+      detectorRef.current = detector;
 
-    const detector = new PenDetector({
-      element: el,
-      thresholds,
-      smooth,
-      // Passive: do NOT preventDefault — Excalidraw needs the touches to
-      // produce its own pointer events for drawing. We only read radius
-      // info to classify and to switch the active tool.
-      passive: true,
-    });
-    detectorRef.current = detector;
-
-    const previousTool = excalidrawAPI.getAppState?.()?.activeTool;
-
-    const swapTool = (tool: Tool) => {
-      const target = TOOL_FOR[tool];
-      if (!target) return;
-      try {
-        excalidrawAPI.setActiveTool({ type: target });
-      } catch {
-        // older Excalidraw versions
-      }
-      // Bump default stroke width for penThick
-      if (tool === "penThick") {
-        excalidrawAPI.updateScene?.({
-          appState: { currentItemStrokeWidth: 4 },
-        });
-      } else if (tool === "penThin") {
-        excalidrawAPI.updateScene?.({
-          appState: { currentItemStrokeWidth: 1 },
-        });
-      }
+      detector.on("pendown", (e) => {
+        const evt = e as PenEvent;
+        const target = TOOL_FOR[evt.tool];
+        if (target) {
+          try {
+            excalidrawAPI.setActiveTool({ type: target });
+          } catch {
+            /* older versions */
+          }
+        }
+        const sw = STROKE_WIDTH_FOR[evt.tool];
+        const sc = STROKE_COLOR_FOR[evt.tool];
+        if (sw !== undefined || sc !== undefined) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const appState: any = {};
+            if (sw !== undefined) appState.currentItemStrokeWidth = sw;
+            if (sc !== undefined) appState.currentItemStrokeColor = sc;
+            excalidrawAPI.updateScene?.({ appState });
+          } catch {
+            /* ignore */
+          }
+        }
+        onPenEventRef.current?.("down", evt);
+      });
+      detector.on("penmove", (e) => {
+        onPenEventRef.current?.("move", e as PenEvent);
+      });
+      detector.on("penup", () => {
+        onPenEventRef.current?.("up", null);
+      });
     };
 
-    detector.on("pendown", (e) => {
-      const evt = e as PenEvent;
-      swapTool(evt.tool);
-      onPenEvent?.("down", evt);
-    });
-    detector.on("penmove", (e) => {
-      onPenEvent?.("move", e as PenEvent);
-    });
-    detector.on("penup", () => {
-      onPenEvent?.("up", null);
-    });
+    // Try immediately, then retry briefly until the editor renders.
+    const attempt = () => {
+      if (cancelled || detector) return;
+      const el = container ?? findExcalidrawRoot();
+      if (el) {
+        attach(el);
+      }
+    };
+    attempt();
+
+    // Poll for up to 3 seconds — Excalidraw can take a moment on slow devices.
+    let tries = 0;
+    const interval = window.setInterval(() => {
+      if (cancelled || detector || tries++ > 30) {
+        window.clearInterval(interval);
+        return;
+      }
+      attempt();
+    }, 100);
 
     return () => {
-      detector.destroy();
+      cancelled = true;
+      window.clearInterval(interval);
+      detector?.destroy();
+      detector = null;
       detectorRef.current = null;
-      // restore the user's last tool when IR mode is turned off
-      if (previousTool && excalidrawAPI.setActiveTool) {
-        try {
-          excalidrawAPI.setActiveTool(previousTool);
-        } catch {
-          // ignore
-        }
-      }
     };
-  }, [enabled, excalidrawAPI, container, thresholds, smooth, onPenEvent]);
+    // onPenEvent is intentionally NOT in the deps — it's accessed via ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, excalidrawAPI, container, thresholds, smooth]);
 
   return detectorRef;
 }
