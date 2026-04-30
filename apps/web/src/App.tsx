@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Excalidraw, MainMenu, useHandleLibrary } from "@excalidraw/excalidraw";
+import {
+  Excalidraw,
+  MainMenu,
+  Sidebar,
+  DefaultSidebar,
+  useHandleLibrary,
+} from "@excalidraw/excalidraw";
 import { io, Socket } from "socket.io-client";
 import { useExcalidrawPen } from "@edraw/pen/excalidraw";
 import type { PenEvent, Thresholds } from "@edraw/pen";
 import { CustomToolbar } from "./CustomToolbar";
 import { NamePrompt } from "./NamePrompt";
-import { LibraryPicker } from "./LibraryPicker";
+import { LibraryCatalogPanel } from "./LibraryCatalogPanel";
 import { IrCalibrate } from "./IrCalibrate";
+
+const CATALOG_TAB = "edraw-catalog";
 
 const PEN_THRESHOLDS_KEY = "edraw-pen-thresholds";
 
@@ -82,10 +90,12 @@ const CalibrateIcon = (
   </svg>
 );
 
-const LibraryIcon = (
-  <svg viewBox="0 0 24 24" style={iconStyle}>
-    <path d="M4 4h6v16H4zM10 4h6v16h-6z" />
-    <path d="M16 4l4 1v15l-4-1" />
+// Used in the sidebar tab trigger — graduation-cap shape suggests "education".
+const CatalogIcon = (
+  <svg viewBox="0 0 24 24" style={{ ...iconStyle, width: 20, height: 20 }}>
+    <path d="M3 9l9-4 9 4-9 4-9-4z" />
+    <path d="M7 11v4c0 1.5 2.5 3 5 3s5-1.5 5-3v-4" />
+    <path d="M21 9v5" />
   </svg>
 );
 
@@ -98,7 +108,6 @@ export default function App() {
   const [irMode, setIrMode] = useState<boolean>(
     () => localStorage.getItem("edraw-ir-mode") === "1",
   );
-  const [libraryOpen, setLibraryOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(
     () => typeof document !== "undefined" && !!document.fullscreenElement,
   );
@@ -387,14 +396,20 @@ export default function App() {
           <MainMenu.Item onSelect={handleCalibrateIr} icon={CalibrateIcon}>
             Calibrar IR
           </MainMenu.Item>
-          <MainMenu.Item onSelect={() => setLibraryOpen(true)} icon={LibraryIcon}>
-            Librerías
-          </MainMenu.Item>
           <MainMenu.Separator />
           <MainMenu.DefaultItems.ClearCanvas />
           <MainMenu.DefaultItems.ToggleTheme />
           <MainMenu.DefaultItems.ChangeCanvasBackground />
         </MainMenu>
+
+        <DefaultSidebar>
+          <DefaultSidebar.TabTriggers>
+            <Sidebar.TabTrigger tab={CATALOG_TAB}>{CatalogIcon}</Sidebar.TabTrigger>
+          </DefaultSidebar.TabTriggers>
+          <Sidebar.Tab tab={CATALOG_TAB}>
+            <LibraryCatalogPanel excalidrawAPI={api} />
+          </Sidebar.Tab>
+        </DefaultSidebar>
       </Excalidraw>
 
       <CustomToolbar
@@ -407,13 +422,6 @@ export default function App() {
           setUsername("");
         }}
       />
-
-      {libraryOpen && (
-        <LibraryPicker
-          excalidrawAPI={api}
-          onClose={() => setLibraryOpen(false)}
-        />
-      )}
     </div>
   );
 }
