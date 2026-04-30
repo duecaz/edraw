@@ -9,10 +9,10 @@ import {
 import { io, Socket } from "socket.io-client";
 import { useExcalidrawPen } from "@edraw/pen/excalidraw";
 import type { PenEvent, Thresholds } from "@edraw/pen";
-import { CustomToolbar } from "./CustomToolbar";
 import { NamePrompt } from "./NamePrompt";
 import { LibraryCatalogPanel } from "./LibraryCatalogPanel";
 import { IrCalibrate } from "./IrCalibrate";
+import { ShareDialog } from "./ShareDialog";
 
 const CATALOG_TAB = "edraw-catalog";
 
@@ -99,6 +99,60 @@ const CatalogIcon = (
   </svg>
 );
 
+const HelpIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M9.5 9a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5M12 17h.01" />
+  </svg>
+);
+
+const ZoomInIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M8 11h6M11 8v6M21 21l-4.3-4.3" />
+  </svg>
+);
+
+const ZoomOutIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M8 11h6M21 21l-4.3-4.3" />
+  </svg>
+);
+
+const ZoomResetIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <circle cx="11" cy="11" r="7" />
+    <path d="M21 21l-4.3-4.3" />
+    <path d="M9 11h4" />
+  </svg>
+);
+
+const ShareIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <circle cx="6" cy="12" r="2.2" />
+    <circle cx="18" cy="6" r="2.2" />
+    <circle cx="18" cy="18" r="2.2" />
+    <path d="M8 11l8-4M8 13l8 4" />
+  </svg>
+);
+
+const FullscreenIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </svg>
+);
+
+const ToolbarBottomIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M3 16h18" />
+    <circle cx="8" cy="18" r="0.6" fill="currentColor" />
+    <circle cx="12" cy="18" r="0.6" fill="currentColor" />
+    <circle cx="16" cy="18" r="0.6" fill="currentColor" />
+  </svg>
+);
+
 export default function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [api, setApi] = useState<any>(null);
@@ -111,6 +165,10 @@ export default function App() {
   const [isFullscreen, setIsFullscreen] = useState<boolean>(
     () => typeof document !== "undefined" && !!document.fullscreenElement,
   );
+  const [toolbarBottom, setToolbarBottom] = useState<boolean>(
+    () => localStorage.getItem("edraw-toolbar-bottom") === "1",
+  );
+  const [shareOpen, setShareOpen] = useState(false);
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const lastSentVersionRef = useRef(0);
@@ -285,6 +343,53 @@ export default function App() {
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  const handleToggleToolbarBottom = () => {
+    const next = !toolbarBottom;
+    setToolbarBottom(next);
+    localStorage.setItem("edraw-toolbar-bottom", next ? "1" : "0");
+  };
+
+  // Zoom helpers — call api.updateScene with a new zoom value, preserving
+  // viewport center by also adjusting scrollX/scrollY.
+  const setZoom = (nextZoom: number) => {
+    if (!api) return;
+    const state = api.getAppState();
+    const cur = state.zoom?.value ?? 1;
+    const z = Math.max(0.1, Math.min(30, nextZoom));
+    if (z === cur) return;
+    // Keep the viewport centre stable while zooming.
+    const w = state.width ?? window.innerWidth;
+    const h = state.height ?? window.innerHeight;
+    const cx = state.scrollX + w / cur / 2;
+    const cy = state.scrollY + h / cur / 2;
+    const newScrollX = cx - w / z / 2;
+    const newScrollY = cy - h / z / 2;
+    api.updateScene({
+      appState: {
+        zoom: { value: z },
+        scrollX: newScrollX,
+        scrollY: newScrollY,
+      },
+    });
+  };
+
+  const handleZoomIn = () => {
+    if (!api) return;
+    setZoom((api.getAppState().zoom?.value ?? 1) * 1.2);
+  };
+  const handleZoomOut = () => {
+    if (!api) return;
+    setZoom((api.getAppState().zoom?.value ?? 1) / 1.2);
+  };
+  const handleZoomReset = () => setZoom(1);
+
+  // Opens the built-in shortcuts dialog by simulating the "?" keystroke.
+  const handleHelp = () => {
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "?", shiftKey: true, bubbles: true }),
+    );
+  };
+
   // Calibration page: shown when the URL has ?ir-calibrate=1.
   // Standalone full-screen UI for tuning IR pen thresholds.
   const calibrateMode = useMemo(
@@ -301,7 +406,10 @@ export default function App() {
   }
 
   return (
-    <div style={{ height: "100vh", width: "100vw", position: "relative" }}>
+    <div
+      className={toolbarBottom ? "edraw-toolbar-bottom" : undefined}
+      style={{ height: "100vh", width: "100vw", position: "relative" }}
+    >
       {inCollab && (
         <div
           style={{
@@ -390,11 +498,43 @@ export default function App() {
           <MainMenu.DefaultItems.SaveAsImage />
           <MainMenu.DefaultItems.Export />
           <MainMenu.Separator />
+          <MainMenu.Item onSelect={() => setShareOpen(true)} icon={ShareIcon}>
+            Compartir sala
+          </MainMenu.Item>
+          <MainMenu.Item
+            onSelect={handleToggleFullscreen}
+            icon={FullscreenIcon}
+            selected={isFullscreen}
+          >
+            {isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          </MainMenu.Item>
+          <MainMenu.Separator />
+          <MainMenu.Item onSelect={handleZoomIn} icon={ZoomInIcon} shortcut="Ctrl+=">
+            Acercar
+          </MainMenu.Item>
+          <MainMenu.Item onSelect={handleZoomOut} icon={ZoomOutIcon} shortcut="Ctrl+-">
+            Alejar
+          </MainMenu.Item>
+          <MainMenu.Item onSelect={handleZoomReset} icon={ZoomResetIcon} shortcut="Ctrl+0">
+            Restablecer zoom
+          </MainMenu.Item>
+          <MainMenu.Separator />
           <MainMenu.Item onSelect={handleToggleIr} icon={IrIcon} selected={irMode}>
             {irMode ? "Pizarra IR (activa)" : "Pizarra IR"}
           </MainMenu.Item>
           <MainMenu.Item onSelect={handleCalibrateIr} icon={CalibrateIcon}>
             Calibrar IR
+          </MainMenu.Item>
+          <MainMenu.Separator />
+          <MainMenu.Item
+            onSelect={handleToggleToolbarBottom}
+            icon={ToolbarBottomIcon}
+            selected={toolbarBottom}
+          >
+            {toolbarBottom ? "Barra arriba" : "Barra abajo"}
+          </MainMenu.Item>
+          <MainMenu.Item onSelect={handleHelp} icon={HelpIcon} shortcut="?">
+            Atajos de teclado
           </MainMenu.Item>
           <MainMenu.Separator />
           <MainMenu.DefaultItems.ClearCanvas />
@@ -412,16 +552,17 @@ export default function App() {
         </DefaultSidebar>
       </Excalidraw>
 
-      <CustomToolbar
-        room={room}
-        username={username}
-        isFullscreen={isFullscreen}
-        onToggleFullscreen={handleToggleFullscreen}
-        onChangeName={() => {
-          localStorage.removeItem("edraw-username");
-          setUsername("");
-        }}
-      />
+      {shareOpen && (
+        <ShareDialog
+          room={room}
+          username={username}
+          onClose={() => setShareOpen(false)}
+          onChangeName={() => {
+            localStorage.removeItem("edraw-username");
+            setUsername("");
+          }}
+        />
+      )}
     </div>
   );
 }

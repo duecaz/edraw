@@ -1,0 +1,52 @@
+/* edraw — UI overrides on top of Excalidraw 0.18 */
+
+/* 1. Hide the floating "?" help button (we expose it via the menu instead). */
+.excalidraw .help-icon {
+  display: none !important;
+}
+
+/* 2. Hide the zoom controls (–/100/+) in the bottom-left footer.
+      Zoom in/out/reset are now in the hamburger menu. */
+.excalidraw .zoom-actions {
+  display: none !important;
+}
+
+/* 3. Library trigger: keep the icon, drop the "Library / Biblioteca" label. */
+.excalidraw .default-sidebar-trigger .sidebar-trigger__label {
+  display: none !important;
+}
+
+/* 4. Relocate Undo/Redo to the top-left, immediately next to (left of) the
+      centered toolbar that has the lock button as its first item. */
+.excalidraw .layer-ui__wrapper__footer-left .undo-redo-buttons {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  flex-direction: row;
+  gap: 4px;
+  background: var(--island-bg-color, #fff);
+  border-radius: var(--border-radius-lg, 8px);
+  padding: 4px;
+  box-shadow: var(--shadow-island, 0 0 0 1px rgba(0, 0, 0, 0.05), 0 2px 4px 0 rgba(0, 0, 0, 0.04));
+}
+
+/* 5. Optional: place the entire main toolbar at the bottom of the screen.
+      Activated by adding the .edraw-toolbar-bottom class on the host. */
+.edraw-toolbar-bottom .excalidraw .App-toolbar-container {
+  position: fixed !important;
+  top: auto !important;
+  bottom: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%);
+  z-index: 4;
+}
+.edraw-toolbar-bottom .excalidraw .layer-ui__wrapper__footer {
+  /* Push the footer up so it doesn't overlap the relocated toolbar. */
+  bottom: 80px !important;
+}
+.edraw-toolbar-bottom .excalidraw .undo-redo-buttons {
+  /* Mirror the toolbar move: undo/redo also at the bottom-left. */
+  top: auto !important;
+  bottom: 24px !important;
+}
