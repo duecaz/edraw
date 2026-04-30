@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 
-type Category = { id: string; name: string };
 type Item = {
   id: string;
   name: string;
   description?: string;
-  category: string;
   file: string;
 };
-type Catalog = { version: number; categories: Category[]; items: Item[] };
+type Topic = { id: string; name: string; items: Item[] };
+type Course = { id: string; name: string; topics: Topic[] };
+type Catalog = { version: number; courses: Course[] };
 
 type Props = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,7 +19,8 @@ type Props = {
 export function LibraryPicker({ excalidrawAPI, onClose }: Props) {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [activeCat, setActiveCat] = useState<string>("");
+  const [activeCourse, setActiveCourse] = useState<string>("");
+  const [activeTopic, setActiveTopic] = useState<string>("");
   const [importingId, setImportingId] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
@@ -31,15 +32,30 @@ export function LibraryPicker({ excalidrawAPI, onClose }: Props) {
       })
       .then((c) => {
         setCatalog(c);
-        setActiveCat(c.categories[0]?.id || "");
+        const firstCourse = c.courses[0];
+        if (firstCourse) {
+          setActiveCourse(firstCourse.id);
+          setActiveTopic(firstCourse.topics[0]?.id ?? "");
+        }
       })
       .catch((e) => setError(e.message));
   }, []);
 
-  const visibleItems = useMemo(() => {
-    if (!catalog) return [];
-    return catalog.items.filter((i) => i.category === activeCat);
-  }, [catalog, activeCat]);
+  const course = useMemo(
+    () => catalog?.courses.find((c) => c.id === activeCourse) ?? null,
+    [catalog, activeCourse],
+  );
+
+  const topic = useMemo(
+    () => course?.topics.find((t) => t.id === activeTopic) ?? null,
+    [course, activeTopic],
+  );
+
+  const handleCourseChange = (courseId: string) => {
+    setActiveCourse(courseId);
+    const newCourse = catalog?.courses.find((c) => c.id === courseId);
+    setActiveTopic(newCourse?.topics[0]?.id ?? "");
+  };
 
   const importLibrary = async (item: Item) => {
     if (!excalidrawAPI) {
@@ -84,8 +100,8 @@ export function LibraryPicker({ excalidrawAPI, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
         style={{
           background: "white",
-          width: "min(820px, 92vw)",
-          height: "min(560px, 84vh)",
+          width: "min(900px, 94vw)",
+          height: "min(620px, 88vh)",
           borderRadius: 12,
           boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
           display: "flex",
@@ -93,6 +109,7 @@ export function LibraryPicker({ excalidrawAPI, onClose }: Props) {
           overflow: "hidden",
         }}
       >
+        {/* Header */}
         <div
           style={{
             display: "flex",
@@ -129,93 +146,136 @@ export function LibraryPicker({ excalidrawAPI, onClose }: Props) {
         )}
 
         {catalog && (
-          <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-            <nav
+          <>
+            {/* Course tabs (curso) */}
+            <div
               style={{
-                width: 180,
-                borderRight: "1px solid #eee",
-                padding: 8,
-                overflowY: "auto",
-                background: "#fafafa",
+                display: "flex",
+                gap: 4,
+                padding: "8px 16px 0",
+                borderBottom: "2px solid #eee",
+                overflowX: "auto",
               }}
             >
-              {catalog.categories.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveCat(c.id)}
-                  style={{
-                    width: "100%",
-                    textAlign: "left",
-                    padding: "8px 12px",
-                    margin: "2px 0",
-                    background: activeCat === c.id ? "#6965db" : "transparent",
-                    color: activeCat === c.id ? "white" : "#374151",
-                    border: "none",
-                    borderRadius: 6,
-                    cursor: "pointer",
-                    fontSize: 13,
-                  }}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </nav>
-
-            <div style={{ flex: 1, padding: 16, overflowY: "auto" }}>
-              {visibleItems.length === 0 && (
-                <div style={{ color: "#666", fontSize: 14 }}>
-                  Sin librerías en esta categoría todavía.
-                </div>
-              )}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                  gap: 12,
-                }}
-              >
-                {visibleItems.map((item) => (
-                  <div
-                    key={item.id}
+              {catalog.courses.map((c) => {
+                const active = c.id === activeCourse;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => handleCourseChange(c.id)}
                     style={{
-                      border: "1px solid #e5e7eb",
-                      borderRadius: 10,
-                      padding: 14,
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 8,
-                      background: "white",
+                      padding: "10px 16px",
+                      background: active ? "white" : "transparent",
+                      color: active ? "#6965db" : "#6b7280",
+                      border: "none",
+                      borderBottom: active ? "3px solid #6965db" : "3px solid transparent",
+                      cursor: "pointer",
+                      fontSize: 14,
+                      fontWeight: active ? 700 : 500,
+                      whiteSpace: "nowrap",
+                      marginBottom: -2,
                     }}
                   >
-                    <div style={{ fontWeight: 600, color: "#1a1a2e" }}>
-                      {item.name}
-                    </div>
-                    {item.description && (
-                      <div style={{ fontSize: 12, color: "#6b7280", flex: 1 }}>
-                        {item.description}
-                      </div>
-                    )}
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Topic subtabs (tema) */}
+            {course && (
+              <div
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  padding: "10px 16px",
+                  borderBottom: "1px solid #eee",
+                  background: "#fafafa",
+                  overflowX: "auto",
+                }}
+              >
+                {course.topics.map((t) => {
+                  const active = t.id === activeTopic;
+                  return (
                     <button
-                      onClick={() => importLibrary(item)}
-                      disabled={importingId === item.id}
+                      key={t.id}
+                      onClick={() => setActiveTopic(t.id)}
                       style={{
-                        marginTop: "auto",
-                        padding: "6px 10px",
-                        background: importingId === item.id ? "#c4c3f0" : "#6965db",
-                        color: "white",
-                        border: "none",
-                        borderRadius: 6,
-                        cursor: importingId === item.id ? "default" : "pointer",
-                        fontSize: 13,
+                        padding: "5px 12px",
+                        background: active ? "#6965db" : "white",
+                        color: active ? "white" : "#374151",
+                        border: `1px solid ${active ? "#6965db" : "#e5e7eb"}`,
+                        borderRadius: 16,
+                        cursor: "pointer",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        whiteSpace: "nowrap",
                       }}
                     >
-                      {importingId === item.id ? "Añadiendo..." : "Añadir"}
+                      {t.name}
                     </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
+            )}
+
+            {/* Items grid */}
+            <div style={{ flex: 1, padding: 16, overflowY: "auto" }}>
+              {!topic || topic.items.length === 0 ? (
+                <div style={{ color: "#9ca3af", fontSize: 14, textAlign: "center", padding: "40px 0" }}>
+                  Aún no hay recursos en este tema.
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {topic.items.map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 10,
+                        padding: 14,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        background: "white",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, color: "#1a1a2e" }}>
+                        {item.name}
+                      </div>
+                      {item.description && (
+                        <div style={{ fontSize: 12, color: "#6b7280", flex: 1 }}>
+                          {item.description}
+                        </div>
+                      )}
+                      <button
+                        onClick={() => importLibrary(item)}
+                        disabled={importingId === item.id}
+                        style={{
+                          marginTop: "auto",
+                          padding: "6px 10px",
+                          background: importingId === item.id ? "#c4c3f0" : "#6965db",
+                          color: "white",
+                          border: "none",
+                          borderRadius: 6,
+                          cursor: importingId === item.id ? "default" : "pointer",
+                          fontSize: 13,
+                        }}
+                      >
+                        {importingId === item.id ? "Añadiendo..." : "Añadir al editor"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          </>
         )}
 
         {statusMsg && (

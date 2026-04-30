@@ -57,6 +57,38 @@ function getSavedName(): string {
   return localStorage.getItem("edraw-username") || "";
 }
 
+const iconStyle: React.CSSProperties = {
+  width: 16,
+  height: 16,
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.6,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+const IrIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <rect x="3" y="4" width="18" height="13" rx="2" />
+    <path d="M8 21h8M12 17v4" />
+    <path d="M9 8.5a4 4 0 016 0M11 11a1.5 1.5 0 012 0" />
+  </svg>
+);
+
+const CalibrateIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1" />
+  </svg>
+);
+
+const LibraryIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M4 4h6v16H4zM10 4h6v16h-6z" />
+    <path d="M16 4l4 1v15l-4-1" />
+  </svg>
+);
+
 export default function App() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [api, setApi] = useState<any>(null);
@@ -67,6 +99,9 @@ export default function App() {
     () => localStorage.getItem("edraw-ir-mode") === "1",
   );
   const [libraryOpen, setLibraryOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(
+    () => typeof document !== "undefined" && !!document.fullscreenElement,
+  );
   const socketRef = useRef<Socket | null>(null);
   const applyingRemoteRef = useRef(false);
   const lastSentVersionRef = useRef(0);
@@ -216,6 +251,31 @@ export default function App() {
     localStorage.setItem("edraw-ir-mode", next ? "1" : "0");
   };
 
+  const handleCalibrateIr = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("ir-calibrate", "1");
+    window.location.href = url.toString();
+  };
+
+  const handleToggleFullscreen = async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch {
+      /* user denied / not supported */
+    }
+  };
+
+  // Track external fullscreen changes (Esc, F11, etc.)
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
   // Calibration page: shown when the URL has ?ir-calibrate=1.
   // Standalone full-screen UI for tuning IR pen thresholds.
   const calibrateMode = useMemo(
@@ -312,6 +372,7 @@ export default function App() {
         onChange={handleChange}
         onPointerUpdate={handlePointerUpdate}
         libraryReturnUrl={libraryReturnUrl}
+        langCode="es-ES"
         initialData={{ appState: { viewBackgroundColor: "#fafafa" } }}
         UIOptions={{ canvasActions: { saveToActiveFile: false } }}
       >
@@ -319,6 +380,16 @@ export default function App() {
           <MainMenu.DefaultItems.LoadScene />
           <MainMenu.DefaultItems.SaveAsImage />
           <MainMenu.DefaultItems.Export />
+          <MainMenu.Separator />
+          <MainMenu.Item onSelect={handleToggleIr} icon={IrIcon} selected={irMode}>
+            {irMode ? "Pizarra IR (activa)" : "Pizarra IR"}
+          </MainMenu.Item>
+          <MainMenu.Item onSelect={handleCalibrateIr} icon={CalibrateIcon}>
+            Calibrar IR
+          </MainMenu.Item>
+          <MainMenu.Item onSelect={() => setLibraryOpen(true)} icon={LibraryIcon}>
+            Librerías
+          </MainMenu.Item>
           <MainMenu.Separator />
           <MainMenu.DefaultItems.ClearCanvas />
           <MainMenu.DefaultItems.ToggleTheme />
@@ -329,14 +400,8 @@ export default function App() {
       <CustomToolbar
         room={room}
         username={username}
-        irMode={irMode}
-        onToggleIr={handleToggleIr}
-        onOpenLibrary={() => setLibraryOpen(true)}
-        onCalibrateIr={() => {
-          const url = new URL(window.location.href);
-          url.searchParams.set("ir-calibrate", "1");
-          window.location.href = url.toString();
-        }}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={handleToggleFullscreen}
         onChangeName={() => {
           localStorage.removeItem("edraw-username");
           setUsername("");

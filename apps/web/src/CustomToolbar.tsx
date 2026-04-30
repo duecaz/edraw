@@ -3,10 +3,8 @@ import { useState } from "react";
 type Props = {
   room: string | null;
   username: string;
-  irMode: boolean;
-  onToggleIr: () => void;
-  onOpenLibrary: () => void;
-  onCalibrateIr: () => void;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
   onChangeName: () => void;
 };
 
@@ -21,15 +19,39 @@ const btn = (active: boolean): React.CSSProperties => ({
   fontSize: 13,
   fontFamily: "system-ui, sans-serif",
   whiteSpace: "nowrap",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 6,
 });
+
+const iconStyle: React.CSSProperties = {
+  width: 16,
+  height: 16,
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+};
+
+const FullscreenIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+  </svg>
+);
+
+const ExitFullscreenIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+  </svg>
+);
 
 export function CustomToolbar({
   room,
   username,
-  irMode,
-  onToggleIr,
-  onOpenLibrary,
-  onCalibrateIr,
+  isFullscreen,
+  onToggleFullscreen,
   onChangeName,
 }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
@@ -157,26 +179,21 @@ export function CustomToolbar({
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-        <button onClick={onOpenLibrary} style={btn(false)} title="Catálogo educativo">
-          Librerías
-        </button>
+      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
         <button
-          onClick={onCalibrateIr}
+          onClick={() => setShareOpen((v) => !v)}
           style={btn(false)}
-          title="Calibrar umbrales del lápiz IR"
+          title={room ? "Compartir sala" : "Iniciar sala"}
         >
-          Calibrar IR
+          {room ? (shareOpen ? "Cerrar" : "Compartir") : "Sala"}
         </button>
         <button
-          onClick={onToggleIr}
-          style={btn(irMode)}
-          title={irMode ? "Desactivar pizarra IR" : "Activar pizarra IR"}
+          onClick={onToggleFullscreen}
+          style={btn(isFullscreen)}
+          title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+          aria-label={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
         >
-          {irMode ? "Pizarra IR ON" : "Pizarra IR"}
-        </button>
-        <button onClick={() => setShareOpen((v) => !v)} style={btn(false)}>
-          {room ? (shareOpen ? "Cerrar" : "Compartir") : "Sala"}
+          {isFullscreen ? ExitFullscreenIcon : FullscreenIcon}
         </button>
       </div>
     </div>

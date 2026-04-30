@@ -1,31 +1,111 @@
 {
-  "version": 1,
-  "categories": [
-    { "id": "matematicas", "name": "Matemáticas" },
-    { "id": "ciencias", "name": "Ciencias Naturales" },
-    { "id": "general", "name": "General" }
-  ],
-  "items": [
+  "version": 2,
+  "courses": [
     {
-      "id": "geometria-basica",
-      "name": "Geometría básica",
-      "description": "Triángulos, cuadrados, círculos para clases de geometría.",
-      "category": "matematicas",
-      "file": "geometria-basica.excalidrawlib"
+      "id": "matematicas",
+      "name": "Matemáticas",
+      "topics": [
+        {
+          "id": "geometria",
+          "name": "Geometría",
+          "items": [
+            {
+              "id": "geometria-basica",
+              "name": "Geometría básica",
+              "description": "Triángulos, cuadrados, círculos y rombos.",
+              "file": "geometria-basica.excalidrawlib"
+            }
+          ]
+        },
+        {
+          "id": "algebra",
+          "name": "Álgebra",
+          "items": []
+        },
+        {
+          "id": "trigonometria",
+          "name": "Trigonometría",
+          "items": []
+        }
+      ]
     },
     {
-      "id": "celula-basica",
-      "name": "Célula básica",
-      "description": "Membrana, núcleo y orgánulos básicos para biología.",
-      "category": "ciencias",
-      "file": "celula-basica.excalidrawlib"
+      "id": "ciencias",
+      "name": "Ciencias Naturales",
+      "topics": [
+        {
+          "id": "biologia-celular",
+          "name": "Biología celular",
+          "items": [
+            {
+              "id": "celula-basica",
+              "name": "Célula básica",
+              "description": "Membrana, núcleo, mitocondria.",
+              "file": "celula-basica.excalidrawlib"
+            }
+          ]
+        },
+        {
+          "id": "fisica",
+          "name": "Física",
+          "items": []
+        },
+        {
+          "id": "quimica",
+          "name": "Química",
+          "items": []
+        }
+      ]
     },
     {
-      "id": "flechas-flujo",
-      "name": "Flechas y flujos",
-      "description": "Flechas direccionales para diagramas de flujo y fuerzas.",
-      "category": "general",
-      "file": "flechas-flujo.excalidrawlib"
+      "id": "literatura",
+      "name": "Literatura",
+      "topics": [
+        {
+          "id": "poetas",
+          "name": "Poetas",
+          "items": []
+        },
+        {
+          "id": "narrativa",
+          "name": "Narrativa",
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "geografia",
+      "name": "Geografía",
+      "topics": [
+        {
+          "id": "mapas",
+          "name": "Mapas",
+          "items": []
+        },
+        {
+          "id": "relieve",
+          "name": "Relieve",
+          "items": []
+        }
+      ]
+    },
+    {
+      "id": "general",
+      "name": "General",
+      "topics": [
+        {
+          "id": "diagramas",
+          "name": "Diagramas",
+          "items": [
+            {
+              "id": "flechas-flujo",
+              "name": "Flechas y flujos",
+              "description": "Flechas direccionales y dobles.",
+              "file": "flechas-flujo.excalidrawlib"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
