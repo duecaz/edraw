@@ -7,13 +7,14 @@
 
 export const VERSION = "2.0";
 
-export type Tool = "penThin" | "penThick" | "eraser" | "none";
+export type Tool = "penThin" | "penThick" | "finger" | "eraser" | "none";
 
 export type ThresholdRange = { min: number; max: number };
 
 export type Thresholds = {
   penThin: ThresholdRange;
   penThick: ThresholdRange;
+  finger: ThresholdRange;
   eraser: ThresholdRange;
 };
 
@@ -54,10 +55,10 @@ type EventName = "pendown" | "penmove" | "penup";
 type Listener = (evt: PenEvent | Record<string, never>) => void;
 
 const DEFAULTS: Thresholds = {
-  penThin: { min: 0, max: 1.2 },
-  penThick: { min: 1.2, max: 2.5 },
-  eraser: { min: 10, max: 30 },
-  // 2.5–10 = finger → 'none'
+  penThin: { min: 0, max: 3.08 },
+  penThick: { min: 3.9, max: 5.0 },
+  finger: { min: 5.01, max: 10.0 },
+  eraser: { min: 10.01, max: 70.0 },
 };
 
 const clamp = (v: number, lo: number, hi: number) =>
@@ -87,6 +88,7 @@ export class PenDetector {
     this.thr = {
       penThin: { ...DEFAULTS.penThin, ...thresholds?.penThin },
       penThick: { ...DEFAULTS.penThick, ...thresholds?.penThick },
+      finger: { ...DEFAULTS.finger, ...thresholds?.finger },
       eraser: { ...DEFAULTS.eraser, ...thresholds?.eraser },
     };
     this.smXY = clamp(smooth.xy ?? 0.2, 0, 0.95);
@@ -239,6 +241,7 @@ export class PenDetector {
     const t = this.thr;
     if (m >= t.penThin.min && m <= t.penThin.max) return "penThin";
     if (m >= t.penThick.min && m <= t.penThick.max) return "penThick";
+    if (m >= t.finger.min && m <= t.finger.max) return "finger";
     if (m >= t.eraser.min && m <= t.eraser.max) return "eraser";
     return "none";
   }
@@ -250,6 +253,7 @@ export class PenDetector {
   setThresholds(thr: Partial<Thresholds>): this {
     if (thr.penThin) Object.assign(this.thr.penThin, thr.penThin);
     if (thr.penThick) Object.assign(this.thr.penThick, thr.penThick);
+    if (thr.finger) Object.assign(this.thr.finger, thr.finger);
     if (thr.eraser) Object.assign(this.thr.eraser, thr.eraser);
     return this;
   }

@@ -14,9 +14,10 @@ export type ExcalidrawPenOptions = {
   onPenEvent?: (kind: "down" | "move" | "up", evt: PenEvent | null) => void;
 };
 
-const TOOL_FOR: Record<Tool, "freedraw" | "line" | "eraser" | null> = {
+const TOOL_FOR: Record<Tool, "freedraw" | "line" | "selection" | "eraser" | null> = {
   penThin: "freedraw",
   penThick: "line",
+  finger: "selection",
   eraser: "eraser",
   none: null,
 };
@@ -32,9 +33,10 @@ const STROKE_COLOR_FOR: Partial<Record<Tool, string>> = {
 };
 
 const DEFAULT_THR: Thresholds = {
-  penThin: { min: 0, max: 1.2 },
-  penThick: { min: 1.2, max: 2.5 },
-  eraser: { min: 10, max: 30 },
+  penThin: { min: 0, max: 3.08 },
+  penThick: { min: 3.9, max: 5.0 },
+  finger: { min: 5.01, max: 10.0 },
+  eraser: { min: 10.01, max: 70.0 },
 };
 
 function findExcalidrawRoot(): HTMLElement | null {
@@ -83,6 +85,7 @@ export function useExcalidrawPen({
     const thr: Thresholds = {
       penThin: { ...DEFAULT_THR.penThin, ...thresholds?.penThin },
       penThick: { ...DEFAULT_THR.penThick, ...thresholds?.penThick },
+      finger: { ...DEFAULT_THR.finger, ...thresholds?.finger },
       eraser: { ...DEFAULT_THR.eraser, ...thresholds?.eraser },
     };
 
