@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
   Excalidraw,
   MainMenu,
@@ -13,6 +13,9 @@ import { NamePrompt } from "./NamePrompt";
 import { LibraryCatalogPanel } from "./LibraryCatalogPanel";
 import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
+
+// Bump on every user-visible fix so deployed builds are easy to confirm.
+const APP_VERSION = "0.2.1";
 
 const CATALOG_TAB = "edraw-catalog";
 
@@ -174,6 +177,16 @@ export default function App() {
     return url.toString();
   }, []);
 
+  // Stable reference for Excalidraw memoised props.
+  const initialData = useMemo(
+    () => ({ appState: { viewBackgroundColor: "#fafafa" } }),
+    [],
+  );
+  const uiOptions = useMemo(
+    () => ({ canvasActions: { saveToActiveFile: false } }),
+    [],
+  );
+
   // Handles #addLibrary= from libraries.excalidraw.com when used as fallback.
   useHandleLibrary({ excalidrawAPI: api });
 
@@ -186,8 +199,12 @@ export default function App() {
     enabled: irMode,
     thresholds: penThresholds,
     onPenEvent: (kind, evt) => {
-      if (kind === "up") setPenDebug(null);
-      else setPenDebug(evt);
+      // Only react to down/up. Updating state on every pointermove would
+      // re-render the parent (and via React.memo's areEqual on callbacks,
+      // Excalidraw too) at the rate of touch events — which corrupts the
+      // pointerDownState Excalidraw caches for drag/resize gestures.
+      if (kind === "down") setPenDebug(evt);
+      else if (kind === "up") setPenDebug(null);
     },
   });
 
@@ -267,8 +284,10 @@ export default function App() {
     };
   }, [api, inCollab, room, me, username]);
 
+  // Keep these stable across renders so Excalidraw's React.memo / areEqual
+  // doesn't keep tearing down internal handlers mid-gesture.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handleChange = (elements: readonly any[]) => {
+  const handleChange = useCallback((elements: readonly any[]) => {
     if (applyingRemoteRef.current) return;
     const socket = socketRef.current;
     if (!socket || !socket.connected) return;
@@ -277,16 +296,22 @@ export default function App() {
     if (vs === lastSentVersionRef.current || vs === lastRemoteVersionRef.current) return;
     lastSentVersionRef.current = vs;
     socket.emit("scene-update", { room, elements });
-  };
+  }, [room]);
 
-  const handlePointerUpdate = (payload: {
+  const handlePointerUpdate = useCallback((payload: {
     pointer: { x: number; y: number };
     button: "down" | "up";
   }) => {
     const socket = socketRef.current;
     if (!socket || !socket.connected) return;
     socket.emit("pointer-update", { room, user: me, pointer: payload.pointer, button: payload.button });
-  };
+  }, [room, me]);
+
+  const handleApi = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (a: any) => setApi(a),
+    [],
+  );
 
   const handleNameConfirm = (name: string) => {
     localStorage.setItem("edraw-username", name);
@@ -448,13 +473,13 @@ export default function App() {
       )}
 
       <Excalidraw
-        excalidrawAPI={(a) => setApi(a)}
+        excalidrawAPI={handleApi}
         onChange={handleChange}
         onPointerUpdate={handlePointerUpdate}
         libraryReturnUrl={libraryReturnUrl}
         langCode="es-ES"
-        initialData={{ appState: { viewBackgroundColor: "#fafafa" } }}
-        UIOptions={{ canvasActions: { saveToActiveFile: false } }}
+        initialData={initialData}
+        UIOptions={uiOptions}
       >
         <MainMenu>
           <MainMenu.DefaultItems.LoadScene />
@@ -494,6 +519,20 @@ export default function App() {
           <MainMenu.DefaultItems.ClearCanvas />
           <MainMenu.DefaultItems.ToggleTheme />
           <MainMenu.DefaultItems.ChangeCanvasBackground />
+          <MainMenu.Separator />
+          <MainMenu.ItemCustom>
+            <div
+              style={{
+                padding: "4px 12px",
+                fontSize: 11,
+                color: "var(--color-text-muted, #9ca3af)",
+                fontFamily: "monospace",
+                userSelect: "text",
+              }}
+            >
+              edraw v{APP_VERSION}
+            </div>
+          </MainMenu.ItemCustom>
         </MainMenu>
 
         <DefaultSidebar>
