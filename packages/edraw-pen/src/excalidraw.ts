@@ -100,6 +100,15 @@ export function useExcalidrawPen({
       const setExcalidrawTool = (tool: Tool) => {
         const target = TOOL_FOR[tool];
         if (!target) return;
+        // Critical: don't fire setState / flushSync when the tool already
+        // matches. Re-applying the same tool would still trigger a React
+        // re-render synchronously, and Excalidraw caches its pointerDownState
+        // (coordinates, bounding boxes) at the very start of the gesture.
+        // A re-render mid-pointerdown corrupts that baseline and breaks
+        // touch-driven manipulations such as dragging a line vertex.
+        const currentType = excalidrawAPI.getAppState?.()?.activeTool?.type;
+        if (currentType === target) return;
+
         const sw = STROKE_WIDTH_FOR[tool];
         const sc = STROKE_COLOR_FOR[tool];
         // flushSync forces the React state update to commit before the
