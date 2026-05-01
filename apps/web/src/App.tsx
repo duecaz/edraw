@@ -15,7 +15,7 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.1";
+const APP_VERSION = "0.2.2";
 
 const CATALOG_TAB = "edraw-catalog";
 

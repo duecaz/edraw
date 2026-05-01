@@ -157,6 +157,19 @@ export function useExcalidrawPen({
         // Ignore if another pointer is already active (palm rejection).
         if (activePointerId !== null && activePointerId !== e.pointerId) return;
 
+        // While the user has elements selected, leave Excalidraw's pointer
+        // handling alone. Switching tool or re-rendering during a vertex /
+        // resize drag corrupts the cached pointerDownState (especially the
+        // resize.offset path used for 2-point linear elements), which is
+        // what made dragging a straight-line endpoint behave as if the
+        // other endpoint were far away. IR tool-switching resumes the
+        // moment the user taps an empty area and selection is cleared.
+        const appState = excalidrawAPI.getAppState?.();
+        const selected = appState?.selectedElementIds;
+        if (selected && Object.keys(selected).length > 0) {
+          return;
+        }
+
         const metric = ((e.width || 0) + (e.height || 0)) / 4;
         const tool = classify(metric, thr);
         if (tool === "none") return;
