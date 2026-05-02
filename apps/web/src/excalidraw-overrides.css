@@ -43,19 +43,37 @@
   }
 }
 
-/* PREVENT Excalidraw's mobile UI mode (App-bottom-bar that covers our
-   centered toolbar and ExtraToolbar, hamburger getting moved around).
-   The 0.18.1 npm bundle does not expose UIOptions.getFormFactor (that
-   API only exists in upstream master), so we can't pass a prop to keep
-   it in desktop mode.
-   Workaround: Excalidraw decides phone vs desktop by ResizeObserver-ing
-   its root .excalidraw element. By forcing a min-width on that element
-   when the viewport would normally be a phone, the measured width stays
-   above the 600px phone breakpoint and Excalidraw renders the desktop
-   layout (our customised top hamburger + centered toolbar + ExtraToolbar
-   + sidebar). The user gets horizontal scroll on truly tiny viewports,
-   but IR boards / classroom screens are always wide enough to never
-   hit this branch. */
+/* Pin Excalidraw's hamburger trigger to the top-left, always.
+   In tablet/desktop modes Excalidraw renders the trigger in
+   .Stack_vertical (top-left of the canvas). In phone mode it goes
+   inside .App-top-bar via a Tunnel. By forcing position:fixed on
+   the .main-menu-trigger element wherever it ends up, the user
+   always sees the hamburger in the same spot. The dropdown still
+   opens correctly because Radix anchors its portaled Content to
+   the trigger's bounding rect. */
+.excalidraw .main-menu-trigger {
+  position: fixed !important;
+  top: 12px !important;
+  left: 12px !important;
+  z-index: 10 !important;
+  background: var(--island-bg-color, #ffffff) !important;
+  border-radius: 12px !important;
+  box-shadow: var(
+    --shadow-island,
+    0 0 0 1px rgba(0, 0, 0, 0.05),
+    0 2px 4px 0 rgba(0, 0, 0, 0.04)
+  ) !important;
+}
+
+/* Defensive: if for any reason Excalidraw still renders its mobile
+   bars (App-bottom-bar covers our toolbar/island; App-top-bar
+   competes with our pinned trigger), hide them. The min-width hack
+   below avoids triggering phone mode in the first place, so these
+   should normally not exist. */
+.excalidraw .App-bottom-bar,
+.excalidraw .App-top-bar {
+  display: none !important;
+}
 @media (max-width: 599px), (max-height: 499px) and (max-width: 999px) {
   .excalidraw,
   .excalidraw-container {
