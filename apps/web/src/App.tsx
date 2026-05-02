@@ -15,13 +15,11 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.3-diag2";
+const APP_VERSION = "0.2.4";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
-// pointer listeners are attached. Used to verify whether the
-// vertex-drag bug is caused by our hook or by something else
-// (Excalidraw stock, CSS overrides, collab sync, etc.).
-const IR_HOOK_DISABLED = true;
+// pointer listeners are attached.
+const IR_HOOK_DISABLED = false;
 
 const CATALOG_TAB = "edraw-catalog";
 
@@ -352,6 +350,60 @@ export default function App() {
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
+
+  // Workaround for an Excalidraw 0.18.1 npm bug (fixed in upstream master
+  // by commit 7da176ff but never released). Touch-dragging an endpoint of
+  // a straight 2-point line/arrow goes through a bbox-resize code path
+  // (App.tsx around the points.length === 2 special-case) whose cached
+  // resize.offset gets desynced on touch, sending the dragged point to a
+  // wildly wrong position — as if the other endpoint were far away. Once
+  // the line has 3+ points, Excalidraw uses LinearElementEditor's
+  // per-point math, which works correctly. The user already observed
+  // this: bending the midpoint "cures" the line.
+  //
+  // We mimic the upstream fix by silently inserting a collinear midpoint
+  // into any 2-point line/arrow as soon as it gets selected. Visually
+  // identical (the midpoint sits exactly between the endpoints) and
+  // Excalidraw routes endpoint drags through the safe path.
+  useEffect(() => {
+    if (!api) return;
+    const tick = () => {
+      const state = api.getAppState();
+      const selected = state.selectedElementIds || {};
+      const ids = Object.keys(selected).filter((k: string) => selected[k]);
+      if (ids.length === 0) return;
+      const elements = api.getSceneElements();
+      let mutated = false;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const next = elements.map((el: any) => {
+        if (
+          ids.includes(el.id) &&
+          (el.type === "line" || el.type === "arrow") &&
+          Array.isArray(el.points) &&
+          el.points.length === 2
+        ) {
+          const [p0, p1] = el.points;
+          const mid: [number, number] = [
+            (p0[0] + p1[0]) / 2,
+            (p0[1] + p1[1]) / 2,
+          ];
+          mutated = true;
+          return {
+            ...el,
+            points: [p0, mid, p1],
+            version: (el.version || 0) + 1,
+            versionNonce: Math.floor(Math.random() * 2 ** 31),
+          };
+        }
+        return el;
+      });
+      if (mutated) {
+        api.updateScene({ elements: next });
+      }
+    };
+    const interval = window.setInterval(tick, 250);
+    return () => window.clearInterval(interval);
+  }, [api]);
 
   const handleToggleToolbarBottom = () => {
     const next = !toolbarBottom;
