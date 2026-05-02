@@ -15,7 +15,7 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.6";
+const APP_VERSION = "0.2.7";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
 // pointer listeners are attached.
@@ -357,6 +357,63 @@ export default function App() {
   useEffect(() => {
     document.body.classList.toggle("edraw-toolbar-bottom", toolbarBottom);
     return () => document.body.classList.remove("edraw-toolbar-bottom");
+  }, [toolbarBottom]);
+
+  // When the toolbar is at the bottom, Radix's avoidCollisions doesn't
+  // always flip the "more tools" dropdown upward (its trigger lives
+  // inside our position:fixed translateX(-50%) container, which confuses
+  // some popper-based collision detectors). The dropdown then opens
+  // downward and gets clipped off-screen.
+  //
+  // This effect watches the body for any [data-radix-popper-content-wrapper]
+  // that contains a toolbar dropdown, and if it has been positioned below
+  // the trigger we override its inline transform to place it above instead.
+  useEffect(() => {
+    if (!toolbarBottom) return;
+
+    const reposition = (wrapper: HTMLElement) => {
+      const dropdown = wrapper.querySelector<HTMLElement>(
+        ".App-toolbar__extra-tools-dropdown",
+      );
+      if (!dropdown) return;
+      const trigger = document.querySelector<HTMLElement>(
+        ".App-toolbar__extra-tools-trigger",
+      );
+      if (!trigger) return;
+      const wRect = wrapper.getBoundingClientRect();
+      const tRect = trigger.getBoundingClientRect();
+      // Only intervene if Radix put the popup at/below the trigger top.
+      if (wRect.top < tRect.top - 4) return;
+      const targetTop = Math.max(8, tRect.top - wRect.height - 8);
+      const targetLeft = Math.max(
+        8,
+        Math.min(window.innerWidth - wRect.width - 8, tRect.right - wRect.width),
+      );
+      wrapper.style.transform = "none";
+      wrapper.style.top = `${targetTop}px`;
+      wrapper.style.left = `${targetLeft}px`;
+      dropdown.setAttribute("data-side", "top");
+    };
+
+    const handle = (node: Node) => {
+      if (!(node instanceof HTMLElement)) return;
+      if (node.matches?.("[data-radix-popper-content-wrapper]")) {
+        // Defer one frame so Radix has applied its initial transform.
+        requestAnimationFrame(() => reposition(node));
+      }
+      const inner = node.querySelector?.<HTMLElement>(
+        "[data-radix-popper-content-wrapper]",
+      );
+      if (inner) requestAnimationFrame(() => reposition(inner));
+    };
+
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        m.addedNodes.forEach(handle);
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: false });
+    return () => observer.disconnect();
   }, [toolbarBottom]);
 
   // Workaround for an Excalidraw 0.18.1 npm bug (fixed in upstream master
