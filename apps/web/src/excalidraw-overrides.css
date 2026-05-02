@@ -37,9 +37,34 @@
    user can still trigger undo/redo with Ctrl+Z/Y, the library via
    the sidebar tabs, and laser/frame/mermaid via the menu if needed.
    On those screens the user is rarely doing serious work anyway. */
-@media (max-width: 600px) {
+@media (max-width: 600px), (max-height: 499px) and (max-width: 999px) {
   .edraw-extra-toolbar {
     display: none !important;
+  }
+}
+
+/* PREVENT Excalidraw's mobile UI mode (App-bottom-bar that covers our
+   centered toolbar and ExtraToolbar, hamburger getting moved around).
+   The 0.18.1 npm bundle does not expose UIOptions.getFormFactor (that
+   API only exists in upstream master), so we can't pass a prop to keep
+   it in desktop mode.
+   Workaround: Excalidraw decides phone vs desktop by ResizeObserver-ing
+   its root .excalidraw element. By forcing a min-width on that element
+   when the viewport would normally be a phone, the measured width stays
+   above the 600px phone breakpoint and Excalidraw renders the desktop
+   layout (our customised top hamburger + centered toolbar + ExtraToolbar
+   + sidebar). The user gets horizontal scroll on truly tiny viewports,
+   but IR boards / classroom screens are always wide enough to never
+   hit this branch. */
+@media (max-width: 599px), (max-height: 499px) and (max-width: 999px) {
+  .excalidraw,
+  .excalidraw-container {
+    min-width: 1200px !important;
+  }
+  html,
+  body,
+  #root {
+    overflow-x: auto !important;
   }
 }
 
