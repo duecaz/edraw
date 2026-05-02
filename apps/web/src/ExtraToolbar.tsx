@@ -206,6 +206,7 @@ export function ExtraToolbar({ excalidrawAPI, anchorBottom }: Props) {
 
   return (
     <div
+      className="edraw-extra-toolbar"
       style={{
         position: "fixed",
         bottom: anchorBottom ? 16 : "auto",

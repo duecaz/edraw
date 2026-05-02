@@ -32,6 +32,17 @@
   display: none !important;
 }
 
+/* On very narrow screens (≤ 600px wide), hide our ExtraToolbar
+   to avoid overlapping with the centered Excalidraw toolbar. The
+   user can still trigger undo/redo with Ctrl+Z/Y, the library via
+   the sidebar tabs, and laser/frame/mermaid via the menu if needed.
+   On those screens the user is rarely doing serious work anyway. */
+@media (max-width: 600px) {
+  .edraw-extra-toolbar {
+    display: none !important;
+  }
+}
+
 /* 5. Default layout = main toolbar pinned to the bottom-center.
       Undo/Redo align to bottom-left at the same y as the toolbar so
       visually they form one continuous row across the bottom edge. */

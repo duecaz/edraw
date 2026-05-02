@@ -16,7 +16,7 @@ import { ShareDialog } from "./ShareDialog";
 import { ExtraToolbar } from "./ExtraToolbar";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.9";
+const APP_VERSION = "0.3.0";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
 // pointer listeners are attached.
@@ -188,7 +188,15 @@ export default function App() {
     [],
   );
   const uiOptions = useMemo(
-    () => ({ canvasActions: { saveToActiveFile: false } }),
+    () => ({
+      canvasActions: { saveToActiveFile: false },
+      // Pin the form factor to desktop so Excalidraw never falls into its
+      // 'phone' layout, which moves the hamburger menu into a bottom bar
+      // that would cover our centered toolbar and the bottom-right
+      // ExtraToolbar island. We keep the hamburger button at the top-left
+      // on every screen size.
+      getFormFactor: () => "desktop" as const,
+    }),
     [],
   );
 
