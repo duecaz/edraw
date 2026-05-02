@@ -15,7 +15,7 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.3-diag1";
+const APP_VERSION = "0.2.3-diag2";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
 // pointer listeners are attached. Used to verify whether the
@@ -390,6 +390,40 @@ export default function App() {
   );
   if (calibrateMode) {
     return <IrCalibrate />;
+  }
+
+  // Minimal mode (?minimal=1): renders a bare Excalidraw with NO custom
+  // children, NO CSS overrides, NO MainMenu/Sidebar customisations, NO
+  // collab, NO IR hook. Used to confirm whether the touch vertex-drag
+  // bug exists in stock @excalidraw/excalidraw 0.18.1 or only with our
+  // customisations on top.
+  const minimalMode = useMemo(
+    () => new URLSearchParams(window.location.search).get("minimal") === "1",
+    [],
+  );
+  if (minimalMode) {
+    return (
+      <div style={{ height: "100vh", width: "100vw" }}>
+        <Excalidraw />
+        <div
+          style={{
+            position: "fixed",
+            top: 8,
+            left: 8,
+            zIndex: 9999,
+            background: "rgba(0,0,0,0.78)",
+            color: "#4cc9f0",
+            fontFamily: "monospace",
+            fontSize: 11,
+            padding: "4px 8px",
+            borderRadius: 6,
+            pointerEvents: "none",
+          }}
+        >
+          MINIMAL · Excalidraw 0.18.1 vanilla · v{APP_VERSION}
+        </div>
+      </div>
+    );
   }
 
   // Only ask for a name when the user is joining a collaboration room.
