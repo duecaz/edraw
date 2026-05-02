@@ -15,7 +15,13 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.2";
+const APP_VERSION = "0.2.3-diag1";
+
+// Diagnostic flag: when true, the IR pen hook is force-disabled and no
+// pointer listeners are attached. Used to verify whether the
+// vertex-drag bug is caused by our hook or by something else
+// (Excalidraw stock, CSS overrides, collab sync, etc.).
+const IR_HOOK_DISABLED = true;
 
 const CATALOG_TAB = "edraw-catalog";
 
@@ -196,13 +202,11 @@ export default function App() {
   const [penDebug, setPenDebug] = useState<PenEvent | null>(null);
   useExcalidrawPen({
     excalidrawAPI: api,
-    enabled: irMode,
+    // Diagnostic: force-disable while we isolate whether the hook is
+    // responsible for the touch-only line endpoint drag bug.
+    enabled: irMode && !IR_HOOK_DISABLED,
     thresholds: penThresholds,
     onPenEvent: (kind, evt) => {
-      // Only react to down/up. Updating state on every pointermove would
-      // re-render the parent (and via React.memo's areEqual on callbacks,
-      // Excalidraw too) at the rate of touch events — which corrupts the
-      // pointerDownState Excalidraw caches for drag/resize gestures.
       if (kind === "down") setPenDebug(evt);
       else if (kind === "up") setPenDebug(null);
     },
@@ -440,16 +444,18 @@ export default function App() {
         >
           <div
             style={{
-              background: "#fef3c7",
-              color: "#78350f",
-              border: "1px solid #fde68a",
+              background: IR_HOOK_DISABLED ? "#fee2e2" : "#fef3c7",
+              color: IR_HOOK_DISABLED ? "#991b1b" : "#78350f",
+              border: `1px solid ${IR_HOOK_DISABLED ? "#fca5a5" : "#fde68a"}`,
               borderRadius: 6,
               padding: "3px 10px",
               fontSize: 12,
               fontFamily: "system-ui, sans-serif",
             }}
           >
-            Pizarra IR · {penDebug ? penDebug.tool : "esperando..."}
+            {IR_HOOK_DISABLED
+              ? "Pizarra IR · DIAG (hook apagado)"
+              : `Pizarra IR · ${penDebug ? penDebug.tool : "esperando..."}`}
           </div>
           {penDebug && (
             <div
