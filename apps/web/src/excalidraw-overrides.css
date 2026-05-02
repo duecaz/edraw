@@ -59,24 +59,15 @@
   left: 16px !important;
 }
 
-/* 6. Toolbar popups (extra-tools dropdown, color/properties popovers).
-      Radix portals the DropdownMenu content into <body>, so it lives
-      OUTSIDE our wrapper div. App.tsx mirrors the flag onto
-      document.body, and these rules target body-level descendants
-      directly so they actually reach the portaled menu. */
-body.edraw-toolbar-bottom .App-toolbar__extra-tools-dropdown {
-  z-index: 10 !important;
-  margin-top: 0 !important;
+/* 6. Hide the "more tools" trigger from Excalidraw's main toolbar.
+      We render a custom ExtraToolbar island with the tools we care about
+      (Frame, Laser, Mermaid) so the broken bottom-direction popup is
+      never an issue and the user gets one-tap access. */
+.excalidraw .App-toolbar__extra-tools-trigger {
+  display: none !important;
 }
-body.edraw-toolbar-bottom .App-toolbar__extra-tools-dropdown[data-side="top"] {
-  margin-top: 0 !important;
-  margin-bottom: 0.5rem !important;
-}
-body.edraw-toolbar-bottom [data-radix-popper-content-wrapper] {
-  z-index: 10 !important;
-}
-body.edraw-toolbar-bottom .focus-visible-popup,
-body.edraw-toolbar-bottom .compact-popover-content,
-body.edraw-toolbar-bottom .popover {
-  z-index: 10 !important;
+/* The divider that sits right before the now-hidden trigger looks
+   orphaned. :has() lets us hide just that one without touching others. */
+.excalidraw .App-toolbar__divider:has(+ .App-toolbar__extra-tools-trigger) {
+  display: none !important;
 }
