@@ -60,32 +60,23 @@
 }
 
 /* 6. Toolbar popups (extra-tools dropdown, color/properties popovers).
-      With the toolbar pinned to the bottom, anything that defaults to
-      open downward gets clipped or hidden behind the toolbar. Let
-      Radix's auto-flip do its job, but make sure it can:
-      - z-index high enough to clear the relocated toolbar (z-index: 4)
-      - margin-top reset so the upward-flipped popup isn't pushed down
-        into the trigger; margin-bottom replaces it for spacing. */
-.edraw-toolbar-bottom .excalidraw .App-toolbar__extra-tools-dropdown {
+      Radix portals the DropdownMenu content into <body>, so it lives
+      OUTSIDE our wrapper div. App.tsx mirrors the flag onto
+      document.body, and these rules target body-level descendants
+      directly so they actually reach the portaled menu. */
+body.edraw-toolbar-bottom .App-toolbar__extra-tools-dropdown {
   z-index: 10 !important;
   margin-top: 0 !important;
 }
-.edraw-toolbar-bottom
-  .excalidraw
-  .App-toolbar__extra-tools-dropdown[data-side="top"] {
+body.edraw-toolbar-bottom .App-toolbar__extra-tools-dropdown[data-side="top"] {
   margin-top: 0 !important;
   margin-bottom: 0.5rem !important;
 }
-/* Radix wraps the menu in a popper-content-wrapper at the same DOM
-   level. Lift it above the toolbar so it isn't covered. */
-.edraw-toolbar-bottom .excalidraw [data-radix-popper-content-wrapper] {
+body.edraw-toolbar-bottom [data-radix-popper-content-wrapper] {
   z-index: 10 !important;
 }
-/* Color/stroke/etc. popovers on the toolbar use a generic popover class.
-   Same z-index treatment so they sit above the toolbar instead of
-   behind it. */
-.edraw-toolbar-bottom .excalidraw .focus-visible-popup,
-.edraw-toolbar-bottom .excalidraw .compact-popover-content,
-.edraw-toolbar-bottom .excalidraw .popover {
+body.edraw-toolbar-bottom .focus-visible-popup,
+body.edraw-toolbar-bottom .compact-popover-content,
+body.edraw-toolbar-bottom .popover {
   z-index: 10 !important;
 }

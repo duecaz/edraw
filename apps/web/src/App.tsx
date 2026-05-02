@@ -15,7 +15,7 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.5";
+const APP_VERSION = "0.2.6";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
 // pointer listeners are attached.
@@ -350,6 +350,14 @@ export default function App() {
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
+
+  // Mirror the toolbar-bottom flag onto <body> so our CSS rules reach
+  // Radix-portaled toolbar dropdowns (which render at body level, not
+  // inside our wrapper).
+  useEffect(() => {
+    document.body.classList.toggle("edraw-toolbar-bottom", toolbarBottom);
+    return () => document.body.classList.remove("edraw-toolbar-bottom");
+  }, [toolbarBottom]);
 
   // Workaround for an Excalidraw 0.18.1 npm bug (fixed in upstream master
   // by commit 7da176ff but never released). Touch-dragging an endpoint of
