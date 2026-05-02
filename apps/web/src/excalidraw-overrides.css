@@ -16,26 +16,20 @@
   display: none !important;
 }
 
-/* 4. Undo/Redo island — pure CSS, no DOM moves. Style them as a small
-      toolbar that sits at the same baseline as the main toolbar so the
-      two islands read as one row. The island uses the same Excalidraw
-      theme variables for background, shadow and radius, so it switches
-      with light/dark theme automatically. */
+/* 4. Undo/Redo are still rendered by Excalidraw (we trigger them via
+      .click() from our custom ExtraToolbar) but we hide the visible
+      island — the user interacts with our buttons instead. */
 .excalidraw .layer-ui__wrapper__footer-left .undo-redo-buttons {
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  z-index: 5;
-  flex-direction: row;
-  gap: 2px;
-  background: var(--island-bg-color, #ffffff);
-  border-radius: var(--border-radius-lg, 12px);
-  padding: 6px;
-  box-shadow: var(
-    --shadow-island,
-    0 0 0 1px rgba(0, 0, 0, 0.05),
-    0 2px 4px 0 rgba(0, 0, 0, 0.04)
-  );
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  pointer-events: none;
+}
+
+/* Hide the default library/sidebar trigger from the right rail.
+   We open the sidebar via api.toggleSidebar() from our custom button. */
+.excalidraw .default-sidebar-trigger {
+  display: none !important;
 }
 
 /* 5. Default layout = main toolbar pinned to the bottom-center.
@@ -52,11 +46,6 @@
 .edraw-toolbar-bottom .excalidraw .layer-ui__wrapper__footer {
   /* Push the rest of the footer above the relocated toolbar. */
   bottom: 88px !important;
-}
-.edraw-toolbar-bottom .excalidraw .undo-redo-buttons {
-  top: auto !important;
-  bottom: 16px !important; /* same baseline as the main toolbar */
-  left: 16px !important;
 }
 
 /* 6. Hide the "more tools" trigger from Excalidraw's main toolbar.

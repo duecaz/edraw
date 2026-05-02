@@ -16,7 +16,7 @@ import { ShareDialog } from "./ShareDialog";
 import { ExtraToolbar } from "./ExtraToolbar";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.8";
+const APP_VERSION = "0.2.9";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
 // pointer listeners are attached.

@@ -19,6 +19,27 @@ const iconStyle: React.CSSProperties = {
   strokeLinejoin: "round",
 };
 
+const UndoIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M9 13l-4-4 4-4" />
+    <path d="M5 9h9a5 5 0 010 10h-3" />
+  </svg>
+);
+
+const RedoIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M15 13l4-4-4-4" />
+    <path d="M19 9h-9a5 5 0 100 10h3" />
+  </svg>
+);
+
+const LibraryIcon = (
+  <svg viewBox="0 0 24 24" style={iconStyle}>
+    <path d="M4 4h6v16H4zM10 4h6v16h-6z" />
+    <path d="M16 4l4 1v15l-4-1" />
+  </svg>
+);
+
 const FrameIcon = (
   <svg viewBox="0 0 24 24" style={iconStyle}>
     <path d="M4 4h4M4 4v4M16 4h4M20 4v4M4 16v4M4 20h4M16 20h4M20 16v4" />
@@ -42,15 +63,49 @@ const MermaidIcon = (
   </svg>
 );
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Api = any;
+
 type ToolDef = {
   id: string;
   title: string;
   icon: React.ReactNode;
-  onActivate: (api: NonNullable<Props["excalidrawAPI"]>) => void;
+  onActivate: (api: Api) => void;
   isActive?: (toolType: string) => boolean;
 };
 
-const TOOLS: ToolDef[] = [
+// Undo/redo trigger the original Excalidraw buttons (kept in the DOM but
+// CSS-hidden) — public API doesn't expose history.undo()/redo().
+function clickHidden(selector: string) {
+  const btn = document.querySelector<HTMLButtonElement>(selector);
+  btn?.click();
+}
+
+const HISTORY_TOOLS: ToolDef[] = [
+  {
+    id: "undo",
+    title: "Deshacer  (Ctrl+Z)",
+    icon: UndoIcon,
+    onActivate: () => clickHidden(".undo-button-container button"),
+  },
+  {
+    id: "redo",
+    title: "Rehacer  (Ctrl+Y)",
+    icon: RedoIcon,
+    onActivate: () => clickHidden(".redo-button-container button"),
+  },
+];
+
+const SIDEBAR_TOOLS: ToolDef[] = [
+  {
+    id: "library",
+    title: "Biblioteca / Catálogo",
+    icon: LibraryIcon,
+    onActivate: (api) => api.toggleSidebar({ name: "default" }),
+  },
+];
+
+const SHAPE_TOOLS: ToolDef[] = [
   {
     id: "laser",
     title: "Puntero láser",
@@ -76,14 +131,68 @@ const TOOLS: ToolDef[] = [
   },
 ];
 
+const Divider = () => (
+  <div
+    style={{
+      width: 1,
+      alignSelf: "stretch",
+      margin: "2px 4px",
+      background: "var(--default-border-color, #e5e7eb)",
+    }}
+  />
+);
+
+function ToolButton({
+  tool,
+  active,
+  api,
+}: {
+  tool: ToolDef;
+  active: boolean;
+  api: Api;
+}) {
+  return (
+    <button
+      onClick={() => tool.onActivate(api)}
+      title={tool.title}
+      aria-label={tool.title}
+      style={{
+        width: 36,
+        height: 36,
+        background: active
+          ? "var(--color-primary-light, #e0dfff)"
+          : "transparent",
+        color: active
+          ? "var(--color-primary, #6965db)"
+          : "var(--icon-fill-color, #1b1b1f)",
+        border: "none",
+        borderRadius: 6,
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        transition: "background 0.12s",
+      }}
+      onMouseEnter={(e) => {
+        if (!active) {
+          e.currentTarget.style.background =
+            "var(--button-hover-bg, #f0f0f5)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!active) e.currentTarget.style.background = "transparent";
+      }}
+    >
+      {tool.icon}
+    </button>
+  );
+}
+
 export function ExtraToolbar({ excalidrawAPI, anchorBottom }: Props) {
   const [activeTool, setActiveToolState] = useState<string>("");
 
   useEffect(() => {
     if (!excalidrawAPI) return;
-    // Excalidraw exposes onChange via the component prop. We listen via
-    // polling — cheaper than re-wiring onChange and only needs to be
-    // accurate for visual highlight, not for behaviour.
     const tick = () => {
       const t = excalidrawAPI.getAppState?.()?.activeTool?.type ?? "";
       setActiveToolState(t);
@@ -105,6 +214,7 @@ export function ExtraToolbar({ excalidrawAPI, anchorBottom }: Props) {
         zIndex: 4,
         display: "flex",
         gap: 2,
+        alignItems: "center",
         background: "var(--island-bg-color, #ffffff)",
         borderRadius: 12,
         padding: 6,
@@ -113,45 +223,22 @@ export function ExtraToolbar({ excalidrawAPI, anchorBottom }: Props) {
         fontFamily: "system-ui, sans-serif",
       }}
     >
-      {TOOLS.map((tool) => {
-        const active = tool.isActive ? tool.isActive(activeTool) : false;
-        return (
-          <button
-            key={tool.id}
-            onClick={() => tool.onActivate(excalidrawAPI)}
-            title={tool.title}
-            aria-label={tool.title}
-            style={{
-              width: 36,
-              height: 36,
-              background: active
-                ? "var(--color-primary-light, #e0dfff)"
-                : "transparent",
-              color: active
-                ? "var(--color-primary, #6965db)"
-                : "var(--icon-fill-color, #1b1b1f)",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "background 0.12s",
-            }}
-            onMouseEnter={(e) => {
-              if (!active) {
-                e.currentTarget.style.background =
-                  "var(--button-hover-bg, #f0f0f5)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!active) e.currentTarget.style.background = "transparent";
-            }}
-          >
-            {tool.icon}
-          </button>
-        );
-      })}
+      {HISTORY_TOOLS.map((tool) => (
+        <ToolButton key={tool.id} tool={tool} active={false} api={excalidrawAPI} />
+      ))}
+      <Divider />
+      {SIDEBAR_TOOLS.map((tool) => (
+        <ToolButton key={tool.id} tool={tool} active={false} api={excalidrawAPI} />
+      ))}
+      <Divider />
+      {SHAPE_TOOLS.map((tool) => (
+        <ToolButton
+          key={tool.id}
+          tool={tool}
+          active={tool.isActive ? tool.isActive(activeTool) : false}
+          api={excalidrawAPI}
+        />
+      ))}
     </div>
   );
 }
