@@ -15,7 +15,7 @@ import { IrCalibrate } from "./IrCalibrate";
 import { ShareDialog } from "./ShareDialog";
 
 // Bump on every user-visible fix so deployed builds are easy to confirm.
-const APP_VERSION = "0.2.4";
+const APP_VERSION = "0.2.5";
 
 // Diagnostic flag: when true, the IR pen hook is force-disabled and no
 // pointer listeners are attached.
